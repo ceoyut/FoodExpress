@@ -1,0 +1,6 @@
+{
+  "name": "FoodExpress - แพลตฟอร์มเดลิเวอรี",
+  "description": "แพลตฟอร์มสั่งอาหารเดลิเวอรีครบวงจร พร้อมระบบ POS คำนวณจ่ายเงินร้านค้า, ระบบสมัครพนักงานจัดส่ง (Rider Registration), ระบบคิวรับออเดอร์ (Rider Queue & Dispatch) และระบบจ่ายเงินไรเดอร์ (Instant Rider Payout Settlement)",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
