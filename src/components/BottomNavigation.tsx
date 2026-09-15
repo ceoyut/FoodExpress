@@ -11,7 +11,8 @@ export const BottomNavigation: React.FC = () => {
     setIsCartOpen, 
     activeOrder, 
     setIsTrackingOpen,
-    activeIncomingTrip
+    activeIncomingTrip,
+    t
   } = useApp();
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -21,7 +22,7 @@ export const BottomNavigation: React.FC = () => {
       {/* Floating Active Order Tracker Pill (if active order in progress) */}
       {activeOrder && activeOrder.status !== 'delivered' && activeOrder.status !== 'cancelled' && (
         <aside 
-          aria-label="การติดตามคำสั่งซื้อที่กำลังจัดส่ง"
+          aria-label="Active order delivery tracking"
           className="sticky bottom-16 left-0 right-0 px-4 pb-2 z-20 pointer-events-auto"
         >
           <button
@@ -41,7 +42,7 @@ export const BottomNavigation: React.FC = () => {
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-emerald-400">กำลังจัดส่ง</span>
+                  <span className="text-xs font-bold text-emerald-400">{t('deliveringOrder')}</span>
                   <span className="text-[10px] text-slate-400">({activeOrder.id})</span>
                 </div>
                 <p className="text-xs font-medium text-slate-200 truncate max-w-[200px]">
@@ -52,7 +53,7 @@ export const BottomNavigation: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800">
-                ดูแผนที่สด
+                {t('liveMap')}
               </span>
             </div>
           </button>
@@ -62,7 +63,7 @@ export const BottomNavigation: React.FC = () => {
       {/* Floating Cart Button (if cart has items and no active tracker covering) */}
       {totalCartCount > 0 && (!activeOrder || activeOrder.status === 'delivered') && (
         <aside 
-          aria-label="ตะกร้าสินค้าของคุณ"
+          aria-label="Shopping Cart"
           className="sticky bottom-16 left-0 right-0 px-4 pb-2 z-20 pointer-events-auto"
         >
           <button
@@ -74,7 +75,7 @@ export const BottomNavigation: React.FC = () => {
               <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-xs font-extrabold">
                 {totalCartCount}
               </div>
-              <span className="font-semibold text-sm">ดูตะกร้าสั่งอาหาร</span>
+              <span className="font-semibold text-sm">{t('viewCart')}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm">฿{cartSubtotal.toLocaleString()}</span>
@@ -96,7 +97,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <Home className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">หน้าแรก</span>
+          <span className="text-[10px]">{t('navHome')}</span>
         </button>
 
         <button
@@ -109,7 +110,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <ReceiptText className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">คำสั่งซื้อ</span>
+          <span className="text-[10px]">{t('navOrders')}</span>
           {activeOrder && activeOrder.status !== 'delivered' && (
             <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
           )}
@@ -125,7 +126,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <Gift className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">สะสมแต้ม</span>
+          <span className="text-[10px]">{t('navRewards')}</span>
         </button>
 
         <button
@@ -138,7 +139,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <Building2 className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">จ่ายเงิน POS</span>
+          <span className="text-[10px]">{t('navPOS')}</span>
         </button>
 
         <button
@@ -151,7 +152,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <Bike className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">ไรเดอร์ Hub</span>
+          <span className="text-[10px]">{t('navRider')}</span>
           {activeIncomingTrip && (
             <span className="absolute top-1 right-2 w-2 h-2 rounded-full bg-red-500 animate-ping" />
           )}
@@ -167,7 +168,7 @@ export const BottomNavigation: React.FC = () => {
           }`}
         >
           <User className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px]">บัญชีของฉัน</span>
+          <span className="text-[10px]">{t('navProfile')}</span>
         </button>
       </nav>
     </>

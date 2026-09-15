@@ -1,6 +1,8 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { MapPin, Bell, Coins, Wallet, Sparkles, ChevronDown, RefreshCw, Building2, Bike } from 'lucide-react';
+import { MapPin, Bell, Coins, Sparkles, ChevronDown, Building2, Bike } from 'lucide-react';
+import { Wallet } from './Wallet';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface HeaderProps {
   onOpenSearch?: () => void;
@@ -12,11 +14,11 @@ export const Header: React.FC<HeaderProps> = () => {
     userLocation,
     unreadNotificationCount,
     setIsNotificationsOpen,
-    setIsTopUpOpen,
     activeTab,
     setActiveTab,
     setIsAuthModalOpen,
     cloudSyncState,
+    t,
   } = useApp();
 
   const defaultAddress = user.savedAddresses.find(a => a.isDefault) || user.savedAddresses[0];
@@ -39,8 +41,8 @@ export const Header: React.FC<HeaderProps> = () => {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 tracking-wide uppercase">
-              <span>{userLocation.isLiveGPS ? 'พิกัด GPS ปัจจุบัน' : 'จัดส่งไปที่'}</span>
-              <span className="text-slate-400">({userLocation.isLiveGPS ? 'สด' : (defaultAddress?.label || 'บ้าน')})</span>
+              <span>{userLocation.isLiveGPS ? t('liveGPS') : t('deliverTo')}</span>
+              <span className="text-slate-400">({userLocation.isLiveGPS ? t('live') : (defaultAddress?.label || t('home'))})</span>
               <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-slate-700 transition-colors" />
             </div>
             <p className="text-xs font-medium text-slate-800 truncate">
@@ -50,6 +52,9 @@ export const Header: React.FC<HeaderProps> = () => {
         </button>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Language Switcher in Header */}
+          <LanguageSwitcher />
+
           {/* Switch to Rider Hub */}
           <button
             id="header-switch-rider-btn"
@@ -59,10 +64,10 @@ export const Header: React.FC<HeaderProps> = () => {
                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                 : 'bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border-slate-200/80 text-slate-700'
             }`}
-            title="สลับไปยังศูนย์พนักงานจัดส่ง (Rider Hub)"
+            title="Rider Hub"
           >
             <Bike className="w-3.5 h-3.5" />
-            <span>{activeTab === 'rider_hub' ? 'ศูนย์ไรเดอร์' : 'ไรเดอร์'}</span>
+            <span>{activeTab === 'rider_hub' ? t('riderHub') : t('riderHubShort')}</span>
           </button>
 
           {/* Switch to POS Settlement System */}
@@ -74,58 +79,42 @@ export const Header: React.FC<HeaderProps> = () => {
                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                 : 'bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border-slate-200/80 text-slate-700'
             }`}
-            title="สลับไปยังระบบคำนวณจ่ายเงินร้านค้า POS"
+            title="Merchant POS"
           >
             <Building2 className="w-3.5 h-3.5" />
-            <span>{activeTab === 'pos_settlement' ? 'ร้านค้า POS' : 'POS'}</span>
+            <span>{activeTab === 'pos_settlement' ? t('posSettlement') : t('posSettlementShort')}</span>
           </button>
 
           {/* Cloud database sync status indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 border border-slate-200/80 text-[11px] text-slate-600">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 border border-slate-200/80 text-[11px] text-slate-600">
             <span className="relative flex h-2 w-2">
               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${cloudSyncState === 'synced' ? 'bg-emerald-400 opacity-75' : 'bg-amber-400 opacity-75'}`} />
               <span className={`relative inline-flex rounded-full h-2 w-2 ${cloudSyncState === 'synced' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             </span>
             <span className="font-medium text-[10px]">
-              {cloudSyncState === 'synced' ? 'Cloud' : 'Saving...'}
+              {cloudSyncState === 'synced' ? t('cloudSync') : t('saving')}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Middle row: Wallet, Points, Notifications & Profile Avatar */}
+      {/* Middle row: Wallet with Warning Badge, Points, Notifications & Profile Avatar */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
-          {/* Wallet Balance Pill */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 shadow-xs">
-            <Wallet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-[9px] font-semibold text-emerald-800 leading-none">วอลเล็ต</span>
-              <span className="text-xs font-bold text-emerald-950 leading-tight">
-                ฿{user.walletBalance.toLocaleString()}
-              </span>
-            </div>
-            <button
-              id="header-topup-wallet-btn"
-              onClick={() => setIsTopUpOpen(true)}
-              className="ml-1 w-5 h-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs font-bold transition-transform active:scale-95 shadow-xs"
-              title="เติมเงินวอลเล็ต"
-            >
-              +
-            </button>
-          </div>
+          {/* Dedicated Wallet Component with Low Balance Warning Badge */}
+          <Wallet />
 
           {/* Loyalty Points Pill */}
           <button
             id="header-loyalty-points-btn"
             onClick={() => setActiveTab('rewards')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100/80 border border-amber-200/60 shadow-xs transition-colors cursor-pointer"
           >
             <Coins className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <div className="flex flex-col text-left">
-              <span className="text-[9px] font-semibold text-amber-800 leading-none">คะแนนสะสม</span>
+              <span className="text-[9px] font-semibold text-amber-800 leading-none">{t('rewardPoints')}</span>
               <span className="text-xs font-bold text-amber-950 leading-tight">
-                {user.loyaltyPoints.toLocaleString()} pts
+                {user.loyaltyPoints.toLocaleString()} {t('pts')}
               </span>
             </div>
             <Sparkles className="w-3 h-3 text-amber-500 animate-pulse ml-0.5" />
@@ -138,8 +127,8 @@ export const Header: React.FC<HeaderProps> = () => {
           <button
             id="header-notifications-btn"
             onClick={() => setIsNotificationsOpen(true)}
-            className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-            title="การแจ้งเตือน"
+            className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title={t('notifications')}
           >
             <Bell className="w-5 h-5" />
             {unreadNotificationCount > 0 && (
@@ -153,8 +142,8 @@ export const Header: React.FC<HeaderProps> = () => {
           <button
             id="header-user-profile-btn"
             onClick={() => setIsAuthModalOpen(true)}
-            className="relative p-0.5 rounded-full ring-2 ring-emerald-500/40 hover:ring-emerald-500 transition-all active:scale-95"
-            title="โปรไฟล์และบัญชีผู้ใช้"
+            className="relative p-0.5 rounded-full ring-2 ring-emerald-500/40 hover:ring-emerald-500 transition-all active:scale-95 cursor-pointer"
+            title={t('profile')}
           >
             <img
               src={user.avatar}
@@ -171,3 +160,4 @@ export const Header: React.FC<HeaderProps> = () => {
     </header>
   );
 };
+

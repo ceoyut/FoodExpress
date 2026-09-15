@@ -1,0 +1,210 @@
+import { MerchantAccount, MerchantGpTier, MerchantSocialProvider } from '../types';
+
+export interface GpPackageInfo {
+  tier: MerchantGpTier;
+  ratePct: number;
+  nameTh: string;
+  nameEn: string;
+  badgeTh: string;
+  popular?: boolean;
+  descriptionTh: string;
+  benefits: string[];
+  recommendedFor: string;
+  borderAccent: string;
+  bgAccent: string;
+}
+
+export const GP_PACKAGES: GpPackageInfo[] = [
+  {
+    tier: 'standard_20',
+    ratePct: 20,
+    nameTh: 'Standard Partner (20%)',
+    nameEn: 'Standard Partner (20% GP)',
+    badgeTh: 'ยอดนิยมสูงสุด ⭐',
+    popular: true,
+    descriptionTh: 'แพ็กเกจยอดนิยมสำหรับร้านอาหารมาตรฐาน เข้าร่วมโปรโมชันหลักและดึงดูดลูกค้าใหม่อย่างต่อเนื่อง',
+    benefits: [
+      'สิทธิ์เข้าร่วมแคมเปญส่งฟรี (Free Delivery)',
+      'ร่วมแคมเปญส่วนลดหลัก Flash Sale 50%',
+      'จัดส่งรวดเร็วด้วยเครือข่ายไรเดอร์ FoodExpress',
+      'รอบโอนเงินสุทธิเข้าบัญชีทุกวัน 14:00 น.',
+      'ระบบสรุปยอดขายและออกใบเสร็จภาษีอัตโนมัติ'
+    ],
+    recommendedFor: 'ร้านอาหารทั่วไป คาเฟ่ และร้านอาหารตามสั่งที่ต้องการยอดขายเติบโตสม่ำเสมอ',
+    borderAccent: 'border-emerald-500',
+    bgAccent: 'bg-emerald-50 text-emerald-800'
+  },
+  {
+    tier: 'growth_25',
+    ratePct: 25,
+    nameTh: 'Growth Booster (25%)',
+    nameEn: 'Growth Booster (25% GP)',
+    badgeTh: 'ดันยอดขายสูงสุด 🚀',
+    descriptionTh: 'แพ็กเกจบุกตลาด ดันร้านขึ้นอันดับต้นในหน้าค้นหา พร้อมแบนเนอร์โปรโมทฟรี',
+    benefits: [
+      'ปักหมุดอันดับ 1-3 ในหน้าหมวดหมู่อาหารยอดนิยม',
+      'รับสิทธิ์แสดงผลแบนเนอร์หน้าแรก (Hero Carousel Spotlight)',
+      'อัลกอริทึมแนะนำร้านค้าให้กับลูกค้าในรัศมี 8 กม.',
+      'คูปองส่วนลดพิเศษร่วมออกโดยแพลตฟอร์ม 15%',
+      'เจ้าหน้าที่ Account Manager ให้คำปรึกษาการตลาดแบบส่วนตัว'
+    ],
+    recommendedFor: 'ร้านดัง แบรนด์พรีเมียม หรือร้านเปิดสาขาใหม่ที่ต้องการสร้างยอดขายทะลุเป้า',
+    borderAccent: 'border-purple-500',
+    bgAccent: 'bg-purple-50 text-purple-800'
+  },
+  {
+    tier: 'starter_15',
+    ratePct: 15,
+    nameTh: 'Starter Local (15%)',
+    nameEn: 'Starter Local (15% GP)',
+    badgeTh: 'ประหยัดต้นทุน 🌿',
+    descriptionTh: 'อัตราพิเศษสำหรับสตรีทฟู้ดและร้านอาหารท้องถิ่นขนาดเล็ก ควบคุมต้นทุนได้อย่างมั่นใจ',
+    benefits: [
+      'ค่าธรรมเนียม GP ต่ำเพียง 15% สบายใจเรื่องต้นทุน',
+      'เข้าถึงฐานลูกค้าออนไลน์ในรัศมี 4 กม.',
+      'เครือข่ายไรเดอร์เข้ารับอาหารถึงหน้าร้าน',
+      'สรุปบัญชีรายวันและระบบการเงินโปร่งใส',
+      'ไม่มีค่าแรกเข้าและไม่มีค่าธรรมเนียมรายปี'
+    ],
+    recommendedFor: 'ร้านอาหารตามสั่งขนาดเล็ก ร้านสตรีทฟู้ด ร้านก๋วยเตี๋ยวรถเข็น',
+    borderAccent: 'border-blue-500',
+    bgAccent: 'bg-blue-50 text-blue-800'
+  },
+  {
+    tier: 'zerogp_0',
+    ratePct: 0,
+    nameTh: 'Self Delivery (0% GP)',
+    nameEn: 'Self-Delivery (0% GP)',
+    badgeTh: 'ไม่เสีย GP 🛵',
+    descriptionTh: 'ร้านค้าจัดส่งเองโดยพนักงานของร้าน ไม่มีค่าธรรมเนียม GP แพลตฟอร์ม',
+    benefits: [
+      'อัตรา GP 0% (ไม่มีการหักค่าคอมมิชชันยอดขาย)',
+      'ร้านค้าใช้พนักงานส่งอาหารของตนเอง',
+      'คิดเพียงค่าธรรมเนียมประมวลผลการชำระเงิน MDR 1.5%',
+      'ระบบจัดการออเดอร์และระบบบิลครบวงจร',
+      'อิสระในการกำหนดรัศมีจัดส่งและค่าส่งเอง'
+    ],
+    recommendedFor: 'ร้านที่มีไรเดอร์ประจำร้านอยู่แล้ว หรือเน้นขายแบบสั่งรับหน้าร้าน (Takeaway)',
+    borderAccent: 'border-slate-400',
+    bgAccent: 'bg-slate-100 text-slate-800'
+  }
+];
+
+export const INITIAL_MERCHANT_ACCOUNTS: MerchantAccount[] = [
+  {
+    id: 'merch_act_1',
+    ownerName: 'คุณสมศักดิ์ วงศ์สว่าง',
+    email: 'somsak.kaprao@gmail.com',
+    phone: '081-445-8890',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    socialProvider: 'google',
+    restaurantId: 'rest_1',
+    restaurantName: 'กะเพราถาดเจ้าเก่า 1999',
+    restaurantLogo: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=500&auto=format&fit=crop&q=80',
+    category: 'อาหารตามสั่ง / จานด่วน',
+    address: '24/1 สุขุมวิท ซอย 33 คลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+    gpRatePct: 20,
+    gpTier: 'standard_20',
+    contractStatus: 'active',
+    contractNumber: 'GP-2026-BKK-00129',
+    isCorporate: true,
+    taxId: '0105562089123',
+    bankAccount: {
+      bankName: 'ธนาคารกสิกรไทย (KBANK)',
+      bankCode: '004',
+      accountNumber: '045-8-12948-2',
+      accountName: 'บจก. กะเพราถาด 1999 (สำนักงานใหญ่)',
+      promptPayId: '0105562089123',
+      branchName: 'สาขาสุขุมวิท 33',
+    },
+    joinedDate: '2025-03-15',
+    role: 'owner',
+  },
+  {
+    id: 'merch_act_2',
+    ownerName: 'คุณแพรวา มั่นคงสกุล',
+    email: 'somtum.zap.official@line.me',
+    phone: '089-772-1145',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    socialProvider: 'line',
+    restaurantId: 'rest_2',
+    restaurantName: 'ส้มตำแซ่บเวอร์ แอนด์ ไก่ย่างเขาสวนกวาง',
+    restaurantLogo: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80',
+    category: 'อาหารอีสาน / ไก่ย่าง',
+    address: 'โครงการเดอะพาร์ค ชั้น G ถ.พระราม 4 แขวงคลองเตย กรุงเทพฯ 10110',
+    gpRatePct: 25,
+    gpTier: 'growth_25',
+    contractStatus: 'active',
+    contractNumber: 'GP-2026-BKK-00452',
+    isCorporate: true,
+    taxId: '0103558019485',
+    bankAccount: {
+      bankName: 'ธนาคารไทยพาณิชย์ (SCB)',
+      bankCode: '014',
+      accountNumber: '408-9-77123-1',
+      accountName: 'หจก. ส้มตำคุณแม่ แซ่บนัว',
+      promptPayId: '0103558019485',
+      branchName: 'สาขาเอ็มควอเทียร์',
+    },
+    joinedDate: '2025-06-20',
+    role: 'owner',
+  },
+  {
+    id: 'merch_act_3',
+    ownerName: 'คุณเคนจิ ทานากะ & ชัยวัฒน์',
+    email: 'nippon.ramen.bkk@facebook.com',
+    phone: '095-223-9988',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    socialProvider: 'facebook',
+    restaurantId: 'rest_3',
+    restaurantName: 'Nippon Ramen & Sushi House',
+    restaurantLogo: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=500&auto=format&fit=crop&q=80',
+    category: 'อาหารญี่ปุ่น / ราเมน',
+    address: '58/2 ซอยทองหล่อ 13 ถ.สุขุมวิท 55 คลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+    gpRatePct: 22,
+    gpTier: 'standard_20',
+    contractStatus: 'active',
+    contractNumber: 'GP-2026-BKK-00789',
+    isCorporate: true,
+    taxId: '0105559038172',
+    bankAccount: {
+      bankName: 'ธนาคารกรุงเทพ (BBL)',
+      bankCode: '002',
+      accountNumber: '127-4-88392-0',
+      accountName: 'บจก. นิปปอน คูซีน แอนด์ ราเมน',
+      promptPayId: '0105559038172',
+      branchName: 'สาขาพร้อมพงษ์',
+    },
+    joinedDate: '2025-08-10',
+    role: 'owner',
+  },
+  {
+    id: 'merch_act_4',
+    ownerName: 'คุณภัทรา วรรณกิจ',
+    email: 'patra.savoir@icloud.com',
+    phone: '086-339-4451',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    socialProvider: 'apple',
+    restaurantId: 'rest_4',
+    restaurantName: 'Savoir Artisan Bakery & Brunch',
+    restaurantLogo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&auto=format&fit=crop&q=80',
+    category: 'เบเกอรี่ / คาเฟ่ / บรันช์',
+    address: '112 ซอยสุขุมวิท 49 คลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+    gpRatePct: 18,
+    gpTier: 'starter_15',
+    contractStatus: 'active',
+    contractNumber: 'GP-2026-BKK-00912',
+    isCorporate: false,
+    taxId: '3100500918231',
+    bankAccount: {
+      bankName: 'ธนาคารกสิกรไทย (KBANK)',
+      bankCode: '004',
+      accountNumber: '712-2-90145-8',
+      accountName: 'นางสาวภัทรา วรรณกิจ (ซาวัวร์ คาเฟ่)',
+      promptPayId: '0812345678',
+      branchName: 'สาขาทองหล่อ',
+    },
+    joinedDate: '2025-11-04',
+    role: 'owner',
+  }
+];

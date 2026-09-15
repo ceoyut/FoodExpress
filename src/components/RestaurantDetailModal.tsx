@@ -17,6 +17,7 @@ import {
   Sparkles 
 } from 'lucide-react';
 import { getRestaurantDistance, formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
+import { getDietaryConfig } from '../data/dietaryPreferences';
 
 interface RestaurantDetailModalProps {
   restaurant: Restaurant;
@@ -117,7 +118,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
 
           {/* Restaurant Header Info Overlay */}
           <div className="absolute bottom-4 left-4 right-4 text-white">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 font-bold text-[11px]">
                 {restaurant.category}
               </span>
@@ -126,6 +127,19 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                   {restaurant.promoBadge}
                 </span>
               )}
+              {restaurant.dietaryPreferences?.map(prefId => {
+                const conf = getDietaryConfig(prefId);
+                if (!conf) return null;
+                return (
+                  <span 
+                    key={prefId} 
+                    className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white border border-white/20 font-bold text-[11px] flex items-center gap-1 shadow-xs"
+                  >
+                    <span>{conf.emoji}</span>
+                    <span>{conf.shortLabel}</span>
+                  </span>
+                );
+              })}
             </div>
 
             <h1 className="text-xl sm:text-2xl font-black text-white drop-shadow-md">
@@ -231,7 +245,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                         >
                           <div className="flex-1 flex flex-col justify-between">
                             <div>
-                              <div className="flex items-center gap-1.5 mb-1">
+                              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                                 {item.isPopular && (
                                   <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
                                     <Sparkles className="w-2.5 h-2.5 text-amber-500" />
@@ -244,6 +258,19 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                                     เผ็ด
                                   </span>
                                 )}
+                                {item.dietary?.map(dietId => {
+                                  const c = getDietaryConfig(dietId);
+                                  if (!c) return null;
+                                  return (
+                                    <span 
+                                      key={dietId}
+                                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${c.theme.badgeBg} ${c.theme.badgeText} ${c.theme.badgeBorder}`}
+                                    >
+                                      <span>{c.emoji}</span>
+                                      <span>{c.shortLabel}</span>
+                                    </span>
+                                  );
+                                })}
                               </div>
 
                               <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-emerald-700 transition-colors line-clamp-1">

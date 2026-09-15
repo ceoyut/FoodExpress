@@ -24,7 +24,11 @@ import {
   ActiveRiderAccount,
   RiderShiftStatus,
   RiderApplicationStatus,
-  UserGeoLocation
+  UserGeoLocation,
+  RiderReportedIssue,
+  MerchantAccount,
+  MerchantSocialProvider,
+  MerchantGpTier
 } from '../types';
 import { 
   DEFAULT_USER_LOCATION,
@@ -45,6 +49,9 @@ import {
   generateMockReconciledOrders
 } from '../data/merchantSettlementData';
 import {
+  INITIAL_MERCHANT_ACCOUNTS
+} from '../data/merchantAuthData';
+import {
   DELIVERY_ZONES,
   DeliveryZone,
   INITIAL_ACTIVE_RIDER,
@@ -54,6 +61,7 @@ import {
   INITIAL_RIDER_EARNINGS_HISTORY,
   INITIAL_RIDER_PAYOUT_SLIPS
 } from '../data/riderData';
+import { TRANSLATIONS, Language } from '../data/translations';
 
 interface ToastState {
   title: string;
@@ -67,7 +75,16 @@ interface AppContextType {
   user: UserProfile;
   loginAs: (provider: UserProfile['loginProvider']) => void;
   topUpWallet: (amount: number) => void;
+  setWalletBalance: (balance: number) => void;
+  walletLowBalanceThreshold: number;
+  setWalletLowBalanceThreshold: (threshold: number) => void;
+  isWalletBalanceLow: boolean;
   toggleFavorite: (restaurantId: string) => void;
+
+  // Language & Internationalization
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
   
   // Cart
   cart: CartItem[];
@@ -152,7 +169,7 @@ interface AppContextType {
   geoErrorMessage: string | null;
   refreshDeviceGeolocation: () => Promise<boolean>;
 
-  // Merchant Daily Payout & POS Settlement System
+  // Merchant Daily Payout & GP Settlement System
   merchantSettlements: MerchantDailySettlement[];
   selectedSettlementRestId: string;
   setSelectedSettlementRestId: (id: string) => void;
@@ -162,6 +179,17 @@ interface AppContextType {
   approveAndTransferPayout: (settlementId: string) => void;
   updateMerchantConfig: (restaurantId: string, newConfig: Partial<MerchantSettlementConfig>) => void;
   updateMerchantBank: (restaurantId: string, newBank: Partial<MerchantBankAccount>) => void;
+  
+  // Merchant Social Auth & GP Onboarding
+  merchantAccounts: MerchantAccount[];
+  activeMerchant: MerchantAccount | null;
+  loginMerchantAs: (provider: MerchantSocialProvider, restaurantId?: string) => void;
+  signupMerchant: (merchantData: Omit<MerchantAccount, 'id' | 'joinedDate'>) => MerchantAccount;
+  logoutMerchant: () => void;
+  isMerchantAuthModalOpen: boolean;
+  setIsMerchantAuthModalOpen: (open: boolean) => void;
+  isGpCalculatorOpen: boolean;
+  setIsGpCalculatorOpen: (open: boolean) => void;
 
   // Rider Management Systems (Registration, Queue, Payout)
   activeRider: ActiveRiderAccount;
@@ -189,6 +217,9 @@ interface AppContextType {
   advanceDeliveringStep: () => void;
   withdrawRiderEarnings: (amount: number, method: 'promptpay' | 'bank_account') => RiderPayoutSlip | null;
   triggerSimulatedIncomingOrder: () => void;
+  riderIssues: RiderReportedIssue[];
+  reportRiderIssue: (issue: Omit<RiderReportedIssue, 'id' | 'reportedAt' | 'status'>) => RiderReportedIssue;
+  resolveRiderIssue: (issueId: string, note?: string) => void;
   
   // Modals
   isCartOpen: boolean;
@@ -228,12 +259,15 @@ const STORAGE_KEYS = {
   NOTIFS: 'foodexpress_notifs_v1',
   DEVICE: 'foodexpress_device_v1',
   MERCHANT_SETTLEMENTS: 'foodexpress_merchant_settlements_v1',
+  MERCHANT_ACCOUNTS: 'foodexpress_merchant_accounts_v1',
+  ACTIVE_MERCHANT: 'foodexpress_active_merchant_v1',
   RIDER_ACCOUNT: 'foodexpress_rider_account_v1',
   RIDER_APPLICATIONS: 'foodexpress_rider_apps_v1',
   RIDER_QUEUE: 'foodexpress_rider_queue_v1',
   RIDER_DISPATCH_ORDERS: 'foodexpress_rider_dispatch_orders_v1',
   RIDER_EARNINGS: 'foodexpress_rider_earnings_v1',
   RIDER_PAYOUT_SLIPS: 'foodexpress_rider_payout_slips_v1',
+  RIDER_ISSUES: 'foodexpress_rider_issues_v1',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -312,9 +346,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [cloudSyncState, setCloudSyncState] = useState<'synced' | 'syncing'>('synced');
+
+  const triggerToast = useCallback((title: string, message: string, type: 'success' | 'info' | 'reward' = 'success') => {
+    setToast({ title, message, type, visible: true });
+    setTimeout(() => {
+      setToast(null);
+    }, 4500);
+  }, []);
+
+  const addNotification = useCallback((item: Omit<NotificationItem, 'id' | 'timestamp' | 'read'> & Partial<NotificationItem>) => {
+    const newItem: NotificationItem = {
+      id: item.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: item.timestamp || 'เมื่อสักครู่',
+      read: item.read ?? false,
+      title: item.title,
+      body: item.body,
+      type: item.type || 'system',
+      actionText: item.actionText,
+      targetId: item.targetId,
+      badge: item.badge,
+    };
+    setNotifications(prev => [newItem, ...prev]);
+  }, []);
+
   const [deviceMode, setDeviceMode] = useState<DeviceViewMode>('responsive');
-  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub'>('home');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+
+  // Language & Internationalization State
+  const [language, setLanguageState] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('foodexpress_lang');
+      return saved === 'en' || saved === 'th' ? saved : 'th';
+    } catch {
+      return 'th';
+    }
+  });
+
+  const setLanguage = useCallback((newLang: Language) => {
+    setLanguageState(newLang);
+    try {
+      localStorage.setItem('foodexpress_lang', newLang);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const t = useCallback((key: string, params?: Record<string, string | number>): string => {
+    const langSet = TRANSLATIONS[language] || TRANSLATIONS.th;
+    let text = (langSet as unknown as Record<string, string>)[key] || (TRANSLATIONS.th as unknown as Record<string, string>)[key] || key;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      });
+    }
+    return text;
+  }, [language]);
+
+  // Wallet Low Balance Threshold State
+  const [walletLowBalanceThreshold, setWalletLowBalanceThresholdState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('foodexpress_wallet_threshold');
+      return saved ? Number(saved) : 150;
+    } catch {
+      return 150;
+    }
+  });
+
+  const setWalletLowBalanceThreshold = useCallback((threshold: number) => {
+    setWalletLowBalanceThresholdState(threshold);
+    try {
+      localStorage.setItem('foodexpress_wallet_threshold', String(threshold));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const setWalletBalance = useCallback((balance: number) => {
+    setUser(prev => ({
+      ...prev,
+      walletBalance: balance,
+    }));
+  }, []);
+
+  const isWalletBalanceLow = user.walletBalance < walletLowBalanceThreshold;
 
   // POS & Merchant Daily Settlements State
   const [merchantSettlements, setMerchantSettlements] = useState<MerchantDailySettlement[]>(() => {
@@ -465,6 +582,125 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // =========================================================================
+  // MERCHANT SOCIAL AUTH & GP REGISTRATION SYSTEM
+  // =========================================================================
+  const [merchantAccounts, setMerchantAccounts] = useState<MerchantAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MERCHANT_ACCOUNTS);
+      return saved ? JSON.parse(saved) : INITIAL_MERCHANT_ACCOUNTS;
+    } catch {
+      return INITIAL_MERCHANT_ACCOUNTS;
+    }
+  });
+
+  const [activeMerchant, setActiveMerchant] = useState<MerchantAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_MERCHANT);
+      if (saved) return JSON.parse(saved);
+      return INITIAL_MERCHANT_ACCOUNTS[0] || null;
+    } catch {
+      return INITIAL_MERCHANT_ACCOUNTS[0] || null;
+    }
+  });
+
+  const [isMerchantAuthModalOpen, setIsMerchantAuthModalOpen] = useState<boolean>(false);
+  const [isGpCalculatorOpen, setIsGpCalculatorOpen] = useState<boolean>(false);
+
+  // Persist merchant accounts & active session
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MERCHANT_ACCOUNTS, JSON.stringify(merchantAccounts));
+    } catch (err) {
+      console.error('Failed to save merchant accounts:', err);
+    }
+  }, [merchantAccounts]);
+
+  useEffect(() => {
+    try {
+      if (activeMerchant) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_MERCHANT, JSON.stringify(activeMerchant));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_MERCHANT);
+      }
+    } catch (err) {
+      console.error('Failed to save active merchant:', err);
+    }
+  }, [activeMerchant]);
+
+  // Social login for merchant
+  const loginMerchantAs = useCallback((provider: MerchantSocialProvider, restaurantId?: string) => {
+    const target = merchantAccounts.find(m => 
+      (restaurantId ? m.restaurantId === restaurantId : true) && 
+      (m.socialProvider === provider || !restaurantId)
+    ) || merchantAccounts.find(m => m.socialProvider === provider) || merchantAccounts[0];
+
+    if (target) {
+      setActiveMerchant(target);
+      setSelectedSettlementRestId(target.restaurantId);
+      triggerToast(
+        'เข้าสู่ระบบร้านค้าสำเร็จ! 🏪',
+        `เข้าสู่ระบบด้วยบัญชี ${provider.toUpperCase()} (ร้าน: ${target.restaurantName})`,
+        'success'
+      );
+    }
+  }, [merchantAccounts, triggerToast]);
+
+  // Register / Sign up new merchant with chosen GP package
+  const signupMerchant = useCallback((merchantData: Omit<MerchantAccount, 'id' | 'joinedDate'>): MerchantAccount => {
+    const newId = `merch_act_${Date.now()}`;
+    const today = new Date().toISOString().split('T')[0];
+
+    const createdMerchant: MerchantAccount = {
+      ...merchantData,
+      id: newId,
+      joinedDate: today,
+    };
+
+    setMerchantAccounts(prev => [createdMerchant, ...prev]);
+    setActiveMerchant(createdMerchant);
+    setSelectedSettlementRestId(createdMerchant.restaurantId);
+
+    // Bootstrap initial settlement configuration for this new merchant
+    const initialConfig: MerchantSettlementConfig = {
+      gpRatePct: createdMerchant.gpRatePct,
+      paymentFeePct: 1.5,
+      vatPct: 7,
+      whtPct: createdMerchant.isCorporate ? 3 : 0,
+      isCorporate: createdMerchant.isCorporate,
+      autoTransferTime: '14:00 น.',
+      enableInstantPushNotifications: true,
+      minPendingPayoutThreshold: 3000,
+      enablePendingPayoutAlert: true,
+    };
+
+    // Bootstrap mock reconciled orders for instant settlement view
+    const initialOrders = generateMockReconciledOrders(createdMerchant.restaurantId, '2026-09-12');
+    const computed = computeMerchantSettlement(
+      createdMerchant.restaurantId,
+      '2026-09-12',
+      'วันนี้ (12 ก.ย. 2026)',
+      initialOrders,
+      initialConfig,
+      createdMerchant.bankAccount
+    );
+
+    // Override restaurant display name
+    computed.restaurantName = createdMerchant.restaurantName;
+    if (createdMerchant.restaurantLogo) {
+      computed.restaurantLogo = createdMerchant.restaurantLogo;
+    }
+
+    setMerchantSettlements(prev => [computed, ...prev]);
+
+    return createdMerchant;
+  }, []);
+
+  // Merchant logout
+  const logoutMerchant = useCallback(() => {
+    setActiveMerchant(null);
+  }, []);
+
+  // =========================================================================
   // RIDER MANAGEMENT STATE & LOGIC
   // 1. Rider Registration & Application
   // 2. Queue & Dispatch System
@@ -525,6 +761,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return saved ? JSON.parse(saved) : INITIAL_RIDER_PAYOUT_SLIPS;
     } catch {
       return INITIAL_RIDER_PAYOUT_SLIPS;
+    }
+  });
+
+  // Rider reported issues (hands-free voice incident reports)
+  const [riderIssues, setRiderIssues] = useState<RiderReportedIssue[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.RIDER_ISSUES);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
     }
   });
 
@@ -611,10 +857,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(STORAGE_KEYS.RIDER_DISPATCH_ORDERS, JSON.stringify(dispatchOrders));
       localStorage.setItem(STORAGE_KEYS.RIDER_EARNINGS, JSON.stringify(riderEarningsHistory));
       localStorage.setItem(STORAGE_KEYS.RIDER_PAYOUT_SLIPS, JSON.stringify(riderPayoutSlips));
+      localStorage.setItem(STORAGE_KEYS.RIDER_ISSUES, JSON.stringify(riderIssues));
     } catch (err) {
       console.error('Failed to save rider state:', err);
     }
-  }, [activeRider, riderApplications, zoneRiderQueue, dispatchOrders, riderEarningsHistory, riderPayoutSlips]);
+  }, [activeRider, riderApplications, zoneRiderQueue, dispatchOrders, riderEarningsHistory, riderPayoutSlips, riderIssues]);
 
   // Submit Rider Application
   const submitRiderApplication = useCallback((appData: Omit<RiderApplication, 'id' | 'submittedAt' | 'status'>) => {
@@ -860,6 +1107,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [activeDeliveringTrip, deliveryStepIndex, playRiderChime]);
 
+  // Report issue from rider (via voice recognition or hands-free console)
+  const reportRiderIssue = useCallback((issueData: Omit<RiderReportedIssue, 'id' | 'reportedAt' | 'status'>) => {
+    const newIssue: RiderReportedIssue = {
+      ...issueData,
+      id: `issue_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      reportedAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.',
+      status: 'acknowledged',
+    };
+
+    setRiderIssues(prev => [newIssue, ...prev]);
+
+    playRiderChime('step_done');
+
+    addNotification({
+      title: `⚠️ แจ้งเหตุ: ${newIssue.categoryLabel}`,
+      body: newIssue.description || newIssue.transcript,
+      type: 'system',
+      badge: 'แจ้งเหตุ',
+    });
+
+    triggerToast(
+      language === 'th' ? '🚨 บันทึกรายงานปัญหาแล้ว' : '🚨 Incident Recorded',
+      `${newIssue.categoryLabel}: ${newIssue.description || newIssue.transcript}`,
+      'info'
+    );
+
+    return newIssue;
+  }, [language, playRiderChime, addNotification, triggerToast]);
+
+  const resolveRiderIssue = useCallback((issueId: string, note?: string) => {
+    setRiderIssues(prev => prev.map(issue => 
+      issue.id === issueId 
+        ? { ...issue, status: 'resolved', resolvedNote: note || 'ศูนย์ช่วยเหลือตรวจสอบและประสานงานเรียบร้อย' } 
+        : issue
+    ));
+    triggerToast(
+      language === 'th' ? 'อัปเดตสถานะปัญหาแล้ว' : 'Issue Updated',
+      'สถานะการแจ้งปัญหาได้รับการอัปเดตเป็นเรียบร้อยแล้ว',
+      'success'
+    );
+  }, [language, triggerToast]);
+
   // Withdraw rider earnings to Bank or PromptPay
   const withdrawRiderEarnings = useCallback((amount: number, method: 'promptpay' | 'bank_account'): RiderPayoutSlip | null => {
     if (amount <= 0 || amount > activeRider.walletBalance) {
@@ -1014,9 +1303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Simulation & Cloud
-  const [cloudSyncState, setCloudSyncState] = useState<'synced' | 'syncing'>('synced');
   const [simulationSpeed, setSimulationSpeed] = useState<'normal' | 'fast'>('fast');
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'msg_1',
@@ -1025,13 +1312,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: 'เมื่อสักครู่',
     }
   ]);
-
-  const triggerToast = useCallback((title: string, message: string, type: 'success' | 'info' | 'reward' = 'success') => {
-    setToast({ title, message, type, visible: true });
-    setTimeout(() => {
-      setToast(null);
-    }, 4500);
-  }, []);
 
   // Geolocation & Proximity State
   const [userLocation, setUserLocation] = useState<UserGeoLocation>(() => {
@@ -1806,21 +2086,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerToast('อัปเดตแล้ว', 'อ่านการแจ้งเตือนทั้งหมดเรียบร้อย', 'info');
   }, [triggerToast]);
 
-  const addNotification = useCallback((item: Omit<NotificationItem, 'id' | 'timestamp' | 'read'> & Partial<NotificationItem>) => {
-    const newItem: NotificationItem = {
-      id: item.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      timestamp: item.timestamp || 'เมื่อสักครู่',
-      read: item.read ?? false,
-      title: item.title,
-      body: item.body,
-      type: item.type || 'system',
-      actionText: item.actionText,
-      targetId: item.targetId,
-      badge: item.badge,
-    };
-    setNotifications(prev => [newItem, ...prev]);
-  }, []);
-
   // Reset Demo Data
   const resetAllData = useCallback(() => {
     localStorage.clear();
@@ -1841,7 +2106,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user,
       loginAs,
       topUpWallet,
+      setWalletBalance,
+      walletLowBalanceThreshold,
+      setWalletLowBalanceThreshold,
+      isWalletBalanceLow,
       toggleFavorite,
+      language,
+      setLanguage,
+      t,
       cart,
       setCart,
       cartRestaurant,
@@ -1896,6 +2168,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       approveAndTransferPayout,
       updateMerchantConfig,
       updateMerchantBank,
+      merchantAccounts,
+      activeMerchant,
+      loginMerchantAs,
+      signupMerchant,
+      logoutMerchant,
+      isMerchantAuthModalOpen,
+      setIsMerchantAuthModalOpen,
+      isGpCalculatorOpen,
+      setIsGpCalculatorOpen,
       // Rider Hub
       activeRider,
       setActiveRider,
@@ -1922,6 +2203,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       advanceDeliveringStep,
       withdrawRiderEarnings,
       triggerSimulatedIncomingOrder,
+      riderIssues,
+      reportRiderIssue,
+      resolveRiderIssue,
       isCartOpen,
       setIsCartOpen,
       isCheckoutOpen,

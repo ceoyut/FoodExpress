@@ -238,6 +238,32 @@ export interface MerchantBankAccount {
   branchName?: string;
 }
 
+export type MerchantSocialProvider = 'google' | 'line' | 'facebook' | 'apple' | 'phone';
+export type MerchantGpTier = 'starter_15' | 'standard_20' | 'growth_25' | 'zerogp_0' | 'custom';
+
+export interface MerchantAccount {
+  id: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  socialProvider: MerchantSocialProvider;
+  restaurantId: string;
+  restaurantName: string;
+  restaurantLogo?: string;
+  category?: string;
+  address?: string;
+  gpRatePct: number;
+  gpTier: MerchantGpTier;
+  contractStatus: 'active' | 'pending_verification' | 'reviewing';
+  contractNumber?: string;
+  isCorporate: boolean;
+  taxId?: string;
+  bankAccount: MerchantBankAccount;
+  joinedDate: string;
+  role: 'owner' | 'manager' | 'partner';
+}
+
 export interface MerchantSettlementConfig {
   gpRatePct: number; // e.g., 20 (%)
   paymentFeePct: number; // e.g., 1.5 (%)
@@ -436,3 +462,19 @@ export interface ActiveRiderAccount {
   totalInQueueCount?: number;
   applicationStatus: RiderApplicationStatus;
 }
+
+export type Language = 'th' | 'en';
+
+export interface RiderReportedIssue {
+  id: string;
+  tripId?: string;
+  orderNumber?: string;
+  category: 'vehicle_breakdown' | 'traffic_weather' | 'customer_unreachable' | 'restaurant_delay' | 'damaged_food' | 'general';
+  categoryLabel: string;
+  description: string;
+  transcript: string;
+  reportedAt: string;
+  status: 'acknowledged' | 'in_review' | 'resolved';
+  resolvedNote?: string;
+}
+

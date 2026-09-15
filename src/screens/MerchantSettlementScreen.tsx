@@ -36,12 +36,17 @@ import {
   ShoppingBag,
   Coins,
   SlidersHorizontal,
-  AlertTriangle
+  AlertTriangle,
+  UserCheck,
+  LogIn,
+  UserPlus,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { MerchantDailySettlement, MerchantOrderReconciliationItem } from '../types';
 import { WeeklyRevenueSummaryView } from '../components/WeeklyRevenueSummaryView';
+import { GP_PACKAGES } from '../data/merchantAuthData';
 
 export const MerchantSettlementScreen: React.FC = () => {
   const {
@@ -54,6 +59,12 @@ export const MerchantSettlementScreen: React.FC = () => {
     approveAndTransferPayout,
     updateMerchantConfig,
     updateMerchantBank,
+    activeMerchant,
+    merchantAccounts,
+    loginMerchantAs,
+    logoutMerchant,
+    setIsMerchantAuthModalOpen,
+    setIsGpCalculatorOpen,
     setActiveTab,
     triggerToast,
     addNotification
@@ -445,22 +456,44 @@ export const MerchantSettlementScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md shadow-emerald-600/20 shrink-0">
-            <Building2 className="w-6 h-6" />
+            <Store className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                POS & Settlement Engine
+                ระบบ GP ร้านค้า (Merchant GP Portal)
               </span>
-              <span className="text-[11px] text-slate-400">รอบบัญชีรายวัน</span>
+              <span className="text-[11px] text-slate-400">รอบบัญชีและส่วนแบ่งรายได้</span>
             </div>
             <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
-              ระบบคำนวณจ่ายเงินร้านค้าประจำวัน
+              ระบบ GP ร้านค้าและคำนวณเงินโอนสุทธิ
             </h1>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* GP Calculator Simulator Button */}
+          <button
+            id="open-gp-calculator-header-btn"
+            onClick={() => setIsGpCalculatorOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="เปิดเครื่องคำนวณและจำลองอัตรา GP"
+          >
+            <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+            <span>คำนวณ GP</span>
+          </button>
+
+          {/* Social Auth Login / Signup Button */}
+          <button
+            id="open-merchant-auth-header-btn"
+            onClick={() => setIsMerchantAuthModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            title="เข้าสู่ระบบร้านค้าด้วย Social หรือลงทะเบียนร้านใหม่"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{activeMerchant ? 'สลับบัญชีร้านค้า' : 'เข้าสู่ระบบ / สมัคร GP'}</span>
+          </button>
+
           {/* Instant Push Notifications Quick Toggle in Header */}
           <button
             id="quick-toggle-push-notif-btn"
@@ -499,12 +532,130 @@ export const MerchantSettlementScreen: React.FC = () => {
             id="open-merchant-settings-btn"
             onClick={handleOpenSettings}
             className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-            title="ตั้งค่าเงื่อนไขสัญญาและบัญชีธนาคาร"
+            title="ตั้งค่าเงื่อนไขสัญญา GP และบัญชีธนาคาร"
           >
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* Merchant Social Partner Identity Card */}
+      {activeMerchant ? (
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950 text-white rounded-3xl p-4 sm:p-5 border border-emerald-500/20 shadow-lg relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="relative">
+                <img 
+                  src={activeMerchant.avatar} 
+                  alt={activeMerchant.ownerName}
+                  className="w-13 h-13 rounded-2xl object-cover border-2 border-emerald-400 shadow-md"
+                />
+                {/* Social Provider Badge on Avatar */}
+                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-xs ${
+                  activeMerchant.socialProvider === 'line'
+                    ? 'bg-[#06C755] text-white'
+                    : activeMerchant.socialProvider === 'google'
+                    ? 'bg-white text-red-600 border border-slate-200'
+                    : activeMerchant.socialProvider === 'facebook'
+                    ? 'bg-[#1877F2] text-white'
+                    : 'bg-black text-white border border-slate-700'
+                }`}>
+                  {activeMerchant.socialProvider === 'line' ? 'L' : activeMerchant.socialProvider === 'google' ? 'G' : activeMerchant.socialProvider === 'facebook' ? 'f' : ''}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-black text-white">
+                    {activeMerchant.ownerName}
+                  </h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-emerald-200 border border-white/10">
+                    เจ้าของร้าน (Owner)
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500 text-emerald-950">
+                    สัญญา GP {activeMerchant.gpRatePct}%
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-300 mt-1 flex-wrap">
+                  <span className="font-bold text-white flex items-center gap-1">
+                    <Store className="w-3.5 h-3.5 text-emerald-400" />
+                    {activeMerchant.restaurantName}
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-[11px] text-slate-300">
+                    เข้าสู่ระบบด้วย: <strong className="text-emerald-300 uppercase">{activeMerchant.socialProvider}</strong>
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {activeMerchant.contractNumber || 'GP-2026-ACTIVE'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <button
+                id="merchant-banner-sim-btn"
+                onClick={() => setIsGpCalculatorOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>จำลองคำนวณ GP</span>
+              </button>
+
+              <button
+                id="merchant-banner-switch-btn"
+                onClick={() => setIsMerchantAuthModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 border border-white/15 cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>สลับร้าน / ล็อกอิน</span>
+              </button>
+
+              <button
+                id="merchant-banner-signup-btn"
+                onClick={() => setIsMerchantAuthModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 font-bold text-xs flex items-center gap-1.5 border border-emerald-400/30 cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>สมัครร้านใหม่</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white rounded-3xl p-4 sm:p-5 border border-emerald-500/30 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+              <Store className="w-6 h-6 text-emerald-300" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white">
+                คุณยังไม่ได้เข้าสู่ระบบบัญชีร้านค้าพาร์ทเนอร์
+              </h3>
+              <p className="text-xs text-emerald-200 mt-0.5">
+                เชื่อมต่อบัญชี Google, LINE, Facebook หรือ Apple เพื่อจัดการอัตรา GP และเงินโอนสุทธิ
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsMerchantAuthModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-white text-emerald-950 font-black text-xs hover:bg-emerald-50 shadow-xs cursor-pointer"
+            >
+              เข้าสู่ระบบด้วย Social
+            </button>
+            <button
+              onClick={() => setIsMerchantAuthModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 shadow-xs cursor-pointer"
+            >
+              สมัครร้านค้า GP ใหม่
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top Status Summary Card */}
       <div 
@@ -781,10 +932,12 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <h2 className="text-base sm:text-lg font-black text-white truncate mt-0.5">
                   {currentRestaurant.name}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
                   <span>รอบสรุปยอด: {currentSettlement.dateDisplayTh}</span>
                   <span>•</span>
-                  <span>สัญญา GP: {currentSettlement.config.gpRatePct}%</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30">
+                    สัญญา GP: {currentSettlement.config.gpRatePct}% ({GP_PACKAGES.find(p => p.gpRatePct === currentSettlement.config.gpRatePct)?.nameTh || 'Custom GP'})
+                  </span>
                   <span>•</span>
                   <span>{currentSettlement.config.isCorporate ? 'นิติบุคคล (WHT 3%)' : 'บุคคลธรรมดา'}</span>
                 </div>
@@ -797,7 +950,17 @@ export const MerchantSettlementScreen: React.FC = () => {
                 {getStatusBadge(currentSettlement.status)}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  id="open-sim-from-card-btn"
+                  onClick={() => setIsGpCalculatorOpen(true)}
+                  className="px-3 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs border border-emerald-400/40"
+                  title="เปิดเครื่องคำนวณและจำลอง GP"
+                >
+                  <Calculator className="w-3.5 h-3.5" />
+                  <span>จำลองคำนวณ GP</span>
+                </button>
+
                 <button
                   id="recalculate-eod-btn"
                   onClick={() => runEodSettlementCalculation(selectedSettlementRestId, selectedSettlementDate)}
@@ -1215,20 +1378,55 @@ export const MerchantSettlementScreen: React.FC = () => {
               <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
                 {/* Contract Rates */}
                 <div className="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                    <Percent className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>อัตราค่าธรรมเนียมและภาษี (Contract & Taxes)</span>
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <Percent className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>อัตราสัญญา GP และภาษี (GP Contract & Taxes)</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSettingsOpen(false);
+                        setIsGpCalculatorOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer"
+                    >
+                      <Calculator className="w-3 h-3 text-emerald-600" />
+                      <span>เปิดเครื่องจำลอง GP</span>
+                    </button>
+                  </div>
+
+                  {/* GP Package Quick Selection */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] text-slate-500 font-medium">เลือกแพ็กเกจ GP สำเร็จรูป:</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {GP_PACKAGES.map(pkg => (
+                        <button
+                          key={pkg.id}
+                          type="button"
+                          onClick={() => setEditGpRate(pkg.gpRatePct)}
+                          className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                            editGpRate === pkg.gpRatePct
+                              ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500'
+                              : 'bg-white hover:bg-slate-100 border-slate-200'
+                          }`}
+                        >
+                          <div className="text-[11px] font-black text-slate-900">{pkg.nameTh}</div>
+                          <div className="text-[10px] font-extrabold text-emerald-600">GP {pkg.gpRatePct}%</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                        อัตราค่า GP ร้านค้า (%):
+                        ระบุอัตราค่า GP ร้านค้า (%):
                       </label>
                       <input
                         type="number"
-                        min="5"
-                        max="35"
+                        min="0"
+                        max="50"
                         step="0.5"
                         value={editGpRate}
                         onChange={e => setEditGpRate(Number(e.target.value))}

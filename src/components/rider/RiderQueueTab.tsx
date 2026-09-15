@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { RiderVoiceAssistant } from './RiderVoiceAssistant';
 import { 
   Radio, 
   Power, 
@@ -173,6 +174,9 @@ export const RiderQueueTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* HANDS-FREE VOICE ASSISTANT CONSOLE (Speech Recognition & Incident Reporting) */}
+      <RiderVoiceAssistant />
 
       {/* 2. ACTIVE DELIVERING TRIP (IF RIDER HAS ACCEPTED AN ORDER) */}
       {activeDeliveringTrip && (

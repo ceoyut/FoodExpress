@@ -4,7 +4,8 @@ import { RESTAURANTS_DATA, CATEGORIES } from '../data/mockData';
 import { RestaurantCard } from '../components/RestaurantCard';
 import { PromoBannerCarousel } from '../components/PromoBannerCarousel';
 import { LocationSortControl } from '../components/LocationSortControl';
-import { RestaurantSortOption } from '../types';
+import { DietaryFilterBar } from '../components/DietaryFilterBar';
+import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
 import { 
   Search, 
@@ -25,16 +26,45 @@ export const HomeScreen: React.FC = () => {
     userLocation,
     setSelectedRestaurant, 
     setIsNotificationsOpen,
-    setActiveTab
+    setActiveTab,
+    t,
+    language
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [activeFilter, setActiveFilter] = useState<'all' | 'free_delivery' | 'high_rating' | 'fast' | 'promo'>('all');
+  const [selectedDietary, setSelectedDietary] = useState<DietaryPreference | 'all'>('all');
   
   // Location-based Sorting & Radius Filter States
   const [sortOption, setSortOption] = useState<RestaurantSortOption>('proximity');
   const [maxDistanceFilter, setMaxDistanceFilter] = useState<number | null>(null);
+
+  // Compute counts of available restaurants per dietary preference
+  const dietaryCounts = useMemo(() => {
+    const counts: Record<DietaryPreference | 'all', number> = {
+      all: RESTAURANTS_DATA.length,
+      vegetarian: 0,
+      vegan: 0,
+      halal: 0,
+      gluten_free: 0,
+      keto: 0,
+    };
+
+    RESTAURANTS_DATA.forEach(r => {
+      const prefs = new Set<DietaryPreference>(r.dietaryPreferences || []);
+      r.menu?.forEach(m => {
+        m.dietary?.forEach(d => prefs.add(d));
+      });
+      prefs.forEach(p => {
+        if (counts[p] !== undefined) {
+          counts[p] = (counts[p] || 0) + 1;
+        }
+      });
+    });
+
+    return counts;
+  }, []);
 
   // Compute restaurants with real-time calculated distance from user's geolocation
   const processedRestaurants = useMemo(() => {
@@ -61,6 +91,15 @@ export const HomeScreen: React.FC = () => {
       // Category matching
       if (selectedCategory && selectedCategory !== 'ทั้งหมด' && rest.category !== selectedCategory) {
         return false;
+      }
+
+      // Dietary preference matching
+      if (selectedDietary !== 'all') {
+        const hasRestaurantPref = rest.dietaryPreferences?.includes(selectedDietary);
+        const hasMenuPref = Array.isArray(rest.menu) && rest.menu.some(m => m.dietary?.includes(selectedDietary));
+        if (!hasRestaurantPref && !hasMenuPref) {
+          return false;
+        }
       }
 
       // Quick filter chips
@@ -97,7 +136,7 @@ export const HomeScreen: React.FC = () => {
       }
       return 0;
     });
-  }, [searchQuery, selectedCategory, activeFilter, sortOption, maxDistanceFilter, userLocation]);
+  }, [searchQuery, selectedCategory, activeFilter, selectedDietary, sortOption, maxDistanceFilter, userLocation]);
 
   // Min and max distances in current result set
   const distances = processedRestaurants.map(r => r.calculatedDistance);
@@ -175,13 +214,13 @@ export const HomeScreen: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="ค้นหาร้านอาหาร, ข้าวกะเพรา, ชานม, ส้มตำ..."
+          placeholder={t('searchPlaceholder')}
           className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700 w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-700 w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center cursor-pointer"
           >
             ✕
           </button>
@@ -191,8 +230,8 @@ export const HomeScreen: React.FC = () => {
       {/* Category Pills Slider */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-bold text-slate-900 px-1">
-          <span>หมวดหมู่อาหาร</span>
-          <span className="text-slate-400 text-[11px] font-normal">เลื่อนดูเพิ่มเติม →</span>
+          <span>{language === 'th' ? 'หมวดหมู่อาหาร' : 'Food Categories'}</span>
+          <span className="text-slate-400 text-[11px] font-normal">{language === 'th' ? 'เลื่อนดูเพิ่มเติม →' : 'Scroll for more →'}</span>
         </div>
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -201,7 +240,7 @@ export const HomeScreen: React.FC = () => {
               key={cat.id}
               id={`cat-btn-${cat.id}`}
               onClick={() => setSelectedCategory(cat.name)}
-              className={`px-3.5 py-2 rounded-2xl flex items-center gap-2 whitespace-nowrap text-xs font-semibold transition-all shrink-0 ${
+              className={`px-3.5 py-2 rounded-2xl flex items-center gap-2 whitespace-nowrap text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                 selectedCategory === cat.name
                   ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-600'
                   : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
@@ -214,70 +253,77 @@ export const HomeScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Dietary Preferences Filter Bar */}
+      <DietaryFilterBar
+        selectedPreference={selectedDietary}
+        onSelectPreference={setSelectedDietary}
+        restaurantCounts={dietaryCounts}
+      />
+
       {/* Filter Chips Bar */}
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
         <button
           id="filter-all-btn"
           onClick={() => setActiveFilter('all')}
-          className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${
+          className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 cursor-pointer ${
             activeFilter === 'all'
               ? 'bg-slate-900 text-white'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
-          ทั้งหมด
+          {t('all')}
         </button>
 
         <button
           id="filter-free-delivery-btn"
           onClick={() => setActiveFilter('free_delivery')}
-          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 ${
+          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
             activeFilter === 'free_delivery'
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <Bike className="w-3.5 h-3.5 text-emerald-500" />
-          <span>ส่งฟรี 0 บาท</span>
+          <span>{t('freeDelivery')}</span>
         </button>
 
         <button
           id="filter-high-rating-btn"
           onClick={() => setActiveFilter('high_rating')}
-          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 ${
+          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
             activeFilter === 'high_rating'
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span>คะแนน 4.8+</span>
+          <span>{t('highRating')}</span>
         </button>
 
         <button
           id="filter-fast-btn"
           onClick={() => setActiveFilter('fast')}
-          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 ${
+          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
             activeFilter === 'fast'
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <Clock className="w-3.5 h-3.5 text-blue-500" />
-          <span>ส่งไว &lt; 20 นาที</span>
+          <span>{t('fastDelivery')}</span>
         </button>
 
         <button
           id="filter-promo-btn"
           onClick={() => setActiveFilter('promo')}
-          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 ${
+          className={`px-3 py-1.5 rounded-full font-medium flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
             activeFilter === 'promo'
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
           }`}
         >
           <Percent className="w-3.5 h-3.5 text-rose-500" />
-          <span>มีส่วนลดพิเศษ</span>
+          <span>{t('specialPromo')}</span>
         </button>
       </div>
 
@@ -297,18 +343,18 @@ export const HomeScreen: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-slate-900 text-base">
-              {sortOption === 'proximity' ? 'ร้านอาหารเรียงตามระยะทางใกล้คุณ' : 'ร้านอาหารแนะนำยอดนิยม'}
+              {sortOption === 'proximity' ? t('nearbyRestaurants') : t('popularRestaurants')}
             </h3>
             {sortOption === 'proximity' && (
               <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-emerald-600" />
-                ใกล้คุณที่สุด
+                {t('closestToYou')}
               </span>
             )}
           </div>
           <p className="text-[11px] text-slate-500">
-            พบ {processedRestaurants.length} ร้านอร่อยพร้อมจัดส่ง
-            {sortOption === 'proximity' && ` • เรียงจากใกล้สุด (${minDistance} กม.)`}
+            {t('foundRestaurants', { count: processedRestaurants.length })}
+            {sortOption === 'proximity' && ` • ${language === 'th' ? `เรียงจากใกล้สุด (${minDistance} กม.)` : `Closest first (${minDistance} km)`}`}
           </p>
         </div>
       </div>
@@ -324,6 +370,7 @@ export const HomeScreen: React.FC = () => {
               calculatedDistanceKm={restaurant.calculatedDistance}
               isDistanceSorted={sortOption === 'proximity'}
               proximityRank={index + 1}
+              activeDietaryPreference={selectedDietary}
             />
           ))}
         </div>
@@ -341,8 +388,9 @@ export const HomeScreen: React.FC = () => {
               setSearchQuery('');
               setSelectedCategory('ทั้งหมด');
               setActiveFilter('all');
+              setSelectedDietary('all');
             }}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs"
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs cursor-pointer"
           >
             ล้างตัวกรองทั้งหมด
           </button>

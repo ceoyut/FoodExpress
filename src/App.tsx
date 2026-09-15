@@ -16,6 +16,8 @@ import { WalletTopUpModal } from './components/WalletTopUpModal';
 import { AuthModal } from './components/AuthModal';
 import { MerchantSettlementScreen } from './screens/MerchantSettlementScreen';
 import { RiderHubScreen } from './screens/RiderHubScreen';
+import { MerchantSocialAuthModal } from './components/merchant/MerchantSocialAuthModal';
+import { MerchantGpCalculatorModal } from './components/merchant/MerchantGpCalculatorModal';
 
 const AppContent: React.FC = () => {
   const { 
@@ -34,6 +36,10 @@ const AppContent: React.FC = () => {
     setIsTopUpOpen, 
     isAuthModalOpen, 
     setIsAuthModalOpen,
+    isMerchantAuthModalOpen,
+    setIsMerchantAuthModalOpen,
+    isGpCalculatorOpen,
+    setIsGpCalculatorOpen,
     toast 
   } = useApp();
 
@@ -99,6 +105,18 @@ const AppContent: React.FC = () => {
         {isAuthModalOpen && (
           <AuthModal onClose={() => setIsAuthModalOpen(false)} />
         )}
+
+        {/* Merchant GP Social Auth & Registration Modal */}
+        <MerchantSocialAuthModal 
+          isOpen={isMerchantAuthModalOpen} 
+          onClose={() => setIsMerchantAuthModalOpen(false)} 
+        />
+
+        {/* Merchant GP Calculator & Simulator Modal */}
+        <MerchantGpCalculatorModal
+          isOpen={isGpCalculatorOpen}
+          onClose={() => setIsGpCalculatorOpen(false)}
+        />
 
         {/* Global Toast Notification */}
         {toast && toast.visible && (

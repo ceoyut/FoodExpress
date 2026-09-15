@@ -140,6 +140,7 @@ export const OrderItem: React.FC<OrderItemProps> = ({
   getStatusBadge,
   getPaymentMethodLabel,
 }) => {
+  const { t } = useApp();
   const [timeMode, setTimeMode] = useState<'delivery' | 'pickup'>('delivery');
   const [isReordering, setIsReordering] = useState(false);
   const estimates = calculateOrderTimeEstimates(order);
@@ -520,13 +521,13 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                     id={`reorder-expanded-btn-${order.id}`}
                     onClick={handleReorderClick}
                     className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all active:scale-98 cursor-pointer"
-                    title="ใส่รายการอาหารทั้งหมดในออเดอร์นี้ลงตะกร้าทันที"
+                    title={t('reorderTooltip')}
                   >
                     <RotateCw className={`w-3.5 h-3.5 ${isReordering ? 'animate-spin text-emerald-600' : ''}`} />
                     <span>
                       {isReordering 
-                        ? 'เพิ่มลงในตะกร้าเรียบร้อยแล้ว! 🛒' 
-                        : `สั่งซ้ำรายการอาหารทั้งออเดอร์นี้ (${totalItemsCount} รายการ)`}
+                        ? t('reorderSuccess')
+                        : t('reorderAllItems', { count: totalItemsCount })}
                     </span>
                   </button>
                 </div>
@@ -558,7 +559,7 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                 className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Bike className="w-4 h-4 animate-bounce" />
-                <span>ติดตามไรเดอร์</span>
+                <span>{t('trackRider')}</span>
               </button>
 
               <button
@@ -569,10 +570,10 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700'
                 }`}
-                title="สั่งซ้ำออเดอร์นี้ - ใส่รายการอาหารลงตะกร้าอัตโนมัติ"
+                title={t('reorderTooltip')}
               >
                 <RotateCw className={`w-3.5 h-3.5 ${isReordering ? 'animate-spin' : ''}`} />
-                <span>{isReordering ? 'ใส่ตะกร้าแล้ว! 🛒' : 'สั่งซ้ำ (Reorder)'}</span>
+                <span>{isReordering ? t('reorderSuccess') : t('reorder')}</span>
               </button>
             </>
           ) : isCancelled ? (
@@ -582,10 +583,10 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                 id={`reorder-btn-${order.id}`}
                 onClick={handleReorderClick}
                 className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 cursor-pointer"
-                title="สั่งซ้ำออเดอร์นี้ - ใส่รายการอาหารลงตะกร้าอัตโนมัติ"
+                title={t('reorderTooltip')}
               >
                 <RotateCw className={`w-3.5 h-3.5 ${isReordering ? 'animate-spin' : ''}`} />
-                <span>{isReordering ? 'ใส่ตะกร้าแล้ว! 🛒' : 'สั่งใหม่ (Reorder)'}</span>
+                <span>{isReordering ? t('reorderSuccess') : t('reorder')}</span>
               </button>
             </div>
           ) : (
@@ -610,10 +611,10 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                 id={`reorder-btn-${order.id}`}
                 onClick={handleReorderClick}
                 className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 cursor-pointer"
-                title="สั่งซ้ำออเดอร์นี้ - ใส่รายการอาหารลงตะกร้าอัตโนมัติ"
+                title={t('reorderTooltip')}
               >
                 <RotateCw className={`w-3.5 h-3.5 ${isReordering ? 'animate-spin' : ''}`} />
-                <span>{isReordering ? 'ใส่ตะกร้าแล้ว! 🛒' : 'สั่งซ้ำ (Reorder)'}</span>
+                <span>{isReordering ? t('reorderSuccess') : t('reorder')}</span>
               </button>
             </>
           )}
@@ -636,7 +637,8 @@ export const OrdersScreen: React.FC = () => {
     setAppliedCoupon,
     setIsCartOpen,
     reorderOrder,
-    triggerToast 
+    triggerToast,
+    t
   } = useApp();
 
   const [filter, setFilter] = useState<FilterTab>('all');
@@ -787,8 +789,8 @@ export const OrdersScreen: React.FC = () => {
       {/* Header & Description */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-black text-slate-900">ประวัติการสั่งอาหาร</h2>
-          <p className="text-[11px] text-slate-500">ติดตามสถานะและตรวจสอบคำสั่งซื้อทั้งหมดของคุณ</p>
+          <h2 className="text-lg font-black text-slate-900">{t('ordersTitle')}</h2>
+          <p className="text-[11px] text-slate-500">{t('ordersSubtitle')}</p>
         </div>
       </div>
 
@@ -820,17 +822,17 @@ export const OrdersScreen: React.FC = () => {
                 className="px-3.5 py-1.5 rounded-xl bg-white text-emerald-800 font-bold text-xs hover:bg-emerald-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 <Bike className="w-3.5 h-3.5 text-emerald-600 animate-bounce" />
-                <span>ติดตามไรเดอร์</span>
+                <span>{t('trackRider')}</span>
               </button>
               <button
                 type="button"
                 id="spotlight-reorder-btn"
                 onClick={() => handleReorder(activeOrder)}
                 className="px-3.5 py-1.5 rounded-xl bg-emerald-500/30 hover:bg-emerald-500/50 border border-white/20 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                title="สั่งซ้ำออเดอร์นี้"
+                title={t('reorderTooltip')}
               >
                 <RotateCw className="w-3.5 h-3.5" />
-                <span>สั่งซ้ำ</span>
+                <span>{t('reorder')}</span>
               </button>
             </div>
           </div>

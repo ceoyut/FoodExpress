@@ -1,8 +1,9 @@
 import React from 'react';
-import { Restaurant } from '../types';
+import { Restaurant, DietaryPreference } from '../types';
 import { useApp } from '../context/AppContext';
 import { Star, Clock, Bike, Heart, MapPin } from 'lucide-react';
 import { formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
+import { getDietaryConfig } from '../data/dietaryPreferences';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -10,6 +11,7 @@ interface RestaurantCardProps {
   calculatedDistanceKm?: number;
   isDistanceSorted?: boolean;
   proximityRank?: number;
+  activeDietaryPreference?: DietaryPreference | 'all';
 }
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({ 
@@ -17,7 +19,8 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   onClick,
   calculatedDistanceKm,
   isDistanceSorted = false,
-  proximityRank
+  proximityRank,
+  activeDietaryPreference = 'all',
 }) => {
   const { user, toggleFavorite } = useApp();
   const isFavorite = user.favoriteRestaurantIds.includes(restaurant.id);
@@ -113,9 +116,33 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
             </h3>
           </div>
 
-          <p className="text-[11px] text-slate-500 mb-2 line-clamp-1">
+          <p className="text-[11px] text-slate-500 mb-1.5 line-clamp-1">
             {restaurant.category} • {restaurant.nameEn}
           </p>
+
+          {/* Dietary Preference Tags */}
+          {restaurant.dietaryPreferences && restaurant.dietaryPreferences.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {restaurant.dietaryPreferences.map(prefId => {
+                const config = getDietaryConfig(prefId);
+                if (!config) return null;
+                const isHighlighted = activeDietaryPreference === prefId;
+                return (
+                  <span
+                    key={prefId}
+                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-all ${
+                      isHighlighted
+                        ? `${config.theme.activeBg} ${config.theme.activeText} ${config.theme.activeBorder} shadow-xs scale-105`
+                        : `${config.theme.badgeBg} ${config.theme.badgeText} ${config.theme.badgeBorder}`
+                    }`}
+                  >
+                    <span>{config.emoji}</span>
+                    <span>{config.shortLabel}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bottom meta stats */}
