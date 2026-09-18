@@ -128,7 +128,7 @@ export const MerchantSettlementScreen: React.FC = () => {
       merchantOrderAudio.startLoopingOrderAlert();
 
       merchantOrderAudio.sendVisualBrowserNotification('🚨 มีออเดอร์ใหม่เข้ามา! (New Order Placed)', {
-        body: `ออเดอร์ #${newOrder.id} • ยอด ฿${newOrder.total.toLocaleString()} (${newOrder.items.length} รายการ) กรุณากดรับทราบทันที`,
+        body: `ออเดอร์ #${newOrder.id} • ยอด ฿${(newOrder.total || 0).toLocaleString()} (${(newOrder.items || []).length} รายการ) กรุณากดรับทราบทันที`,
         icon: newOrder.restaurantLogo,
         tag: newOrder.id,
         onClick: () => {
@@ -139,7 +139,7 @@ export const MerchantSettlementScreen: React.FC = () => {
 
       triggerToast(
         '🚨 มีออเดอร์ใหม่เข้ามา!',
-        `ออเดอร์ #${newOrder.id} ยอด ฿${newOrder.total.toLocaleString()} รอการกดรับทราบ`,
+        `ออเดอร์ #${newOrder.id} ยอด ฿${(newOrder.total || 0).toLocaleString()} รอการกดรับทราบ`,
         'reward'
       );
     }
@@ -219,7 +219,7 @@ export const MerchantSettlementScreen: React.FC = () => {
     merchantOrderAudio.startLoopingOrderAlert();
 
     merchantOrderAudio.sendVisualBrowserNotification('🚨 มีออเดอร์ใหม่เข้ามา! (New Order Placed)', {
-      body: `ออเดอร์ #${newOrder.id} • ยอด ฿${newOrder.total.toLocaleString()} (${newOrder.items.length} รายการ) กรุณากดรับทราบทันที`,
+      body: `ออเดอร์ #${newOrder.id} • ยอด ฿${(newOrder.total || 0).toLocaleString()} (${(newOrder.items || []).length} รายการ) กรุณากดรับทราบทันที`,
       icon: newOrder.restaurantLogo,
       tag: newOrder.id,
       onClick: () => {

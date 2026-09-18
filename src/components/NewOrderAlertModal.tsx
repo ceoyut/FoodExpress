@@ -207,7 +207,7 @@ export const NewOrderAlertModal: React.FC<NewOrderAlertModalProps> = ({
                     </div>
 
                     <span className="text-xs font-bold text-slate-800 shrink-0">
-                      ฿{(item.unitPrice * item.quantity).toLocaleString()}
+                      ฿{((item.unitPrice || 0) * (item.quantity || 1)).toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -233,7 +233,7 @@ export const NewOrderAlertModal: React.FC<NewOrderAlertModalProps> = ({
                   ยอดรวมทั้งสิ้น (Total)
                 </span>
                 <span className="text-lg font-black text-emerald-700">
-                  ฿{order.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ฿{(order.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

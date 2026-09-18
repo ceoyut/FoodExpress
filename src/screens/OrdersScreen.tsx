@@ -413,7 +413,7 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                               {item.quantity} จาน
                             </span>
                             <span>×</span>
-                            <span>฿{item.unitPrice.toLocaleString()}</span>
+                            <span>฿{(item.unitPrice || 0).toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -421,10 +421,10 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                       {/* Item Total */}
                       <div className="text-right shrink-0">
                         <span className="font-black text-slate-900 text-xs sm:text-sm">
-                          ฿{itemTotal.toLocaleString()}
+                          ฿{(itemTotal || 0).toLocaleString()}
                         </span>
                         <div className="text-[10px] text-slate-400">
-                          ({item.quantity}x)
+                          ({item.quantity || 1}x)
                         </div>
                       </div>
                     </div>

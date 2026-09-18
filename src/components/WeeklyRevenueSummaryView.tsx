@@ -166,13 +166,17 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
         );
 
         if (exactMatch) {
-          gross = exactMatch.grossSales;
-          net = exactMatch.netPayoutPayable;
-          gp = exactMatch.platformGpFee;
-          fees = Math.round(exactMatch.paymentGatewayFeeMdr + exactMatch.vatOnGp - (exactMatch.whtDeductedByPlatform || 0));
+          gross = exactMatch.grossSales || 0;
+          net = exactMatch.netPayoutPayable || 0;
+          gp = exactMatch.platformGpAmount ?? (exactMatch as any).platformGpFee ?? Math.round(gross * 0.20);
+          fees = Math.round(
+            (exactMatch.paymentProcessingFee ?? (exactMatch as any).paymentGatewayFeeMdr ?? Math.round(gross * 0.015)) +
+            (exactMatch.vatOnFees ?? (exactMatch as any).vatOnGp ?? Math.round(gp * 0.07)) -
+            (exactMatch.withholdingTax ?? (exactMatch as any).whtDeductedByPlatform ?? 0)
+          );
           orders = exactMatch.completedOrdersCount || exactMatch.totalOrdersCount || 42;
           tips = exactMatch.totalTipsReceived || Math.round(orders * 18);
-          status = exactMatch.status;
+          status = exactMatch.status || 'paid';
         } else {
           const base = getRestBaseRevenue(selectedSettlementRestId);
           const mult = dayMultipliers[dayInfo.date] || 1.0;
@@ -189,10 +193,13 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
         
         if (matchingSettlements.length > 0) {
           matchingSettlements.forEach(s => {
-            gross += s.grossSales;
-            net += s.netPayoutPayable;
-            gp += s.platformGpFee;
-            fees += Math.round(s.paymentGatewayFeeMdr + s.vatOnGp);
+            gross += s.grossSales || 0;
+            net += s.netPayoutPayable || 0;
+            gp += s.platformGpAmount ?? (s as any).platformGpFee ?? Math.round((s.grossSales || 0) * 0.20);
+            fees += Math.round(
+              (s.paymentProcessingFee ?? (s as any).paymentGatewayFeeMdr ?? 0) +
+              (s.vatOnFees ?? (s as any).vatOnGp ?? 0)
+            );
             orders += s.completedOrdersCount || s.totalOrdersCount || 0;
             tips += s.totalTipsReceived || 0;
           });
@@ -316,7 +323,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
                 ยอดขายรวม (Gross):
               </span>
               <span className="font-extrabold text-emerald-400">
-                ฿{data.grossSales.toLocaleString()}
+                ฿{(data.grossSales || 0).toLocaleString()}
               </span>
             </div>
 
@@ -326,7 +333,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
                 ยอดสุทธิร้านค้า (Net):
               </span>
               <span className="font-extrabold text-blue-400">
-                ฿{data.netPayout.toLocaleString()}
+                ฿{(data.netPayout || 0).toLocaleString()}
               </span>
             </div>
 
@@ -336,23 +343,23 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
                 หัก GP แพลตฟอร์ม:
               </span>
               <span className="font-bold text-rose-300">
-                -฿{data.platformGp.toLocaleString()}
+                -฿{(data.platformGp || 0).toLocaleString()}
               </span>
             </div>
 
             <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-[11px] text-slate-300">
               <span>จำนวนคำสั่งซื้อ:</span>
-              <span className="font-semibold text-white">{data.totalOrders} ออเดอร์</span>
+              <span className="font-semibold text-white">{data.totalOrders || 0} ออเดอร์</span>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-300">
               <span>ยอดเฉลี่ยต่อบิล (AOV):</span>
-              <span className="font-semibold text-amber-300">฿{data.aov} / บิล</span>
+              <span className="font-semibold text-amber-300">฿{data.aov || 0} / บิล</span>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-300">
               <span>ทิปพนักงานส่ง:</span>
-              <span className="font-semibold text-purple-300">฿{data.tips.toLocaleString()}</span>
+              <span className="font-semibold text-purple-300">฿{(data.tips || 0).toLocaleString()}</span>
             </div>
           </div>
 
@@ -517,7 +524,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
             <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
           </span>
           <div className="text-lg sm:text-xl font-black text-slate-900">
-            ฿{weeklySummary.totalGross.toLocaleString()}
+            ฿{(weeklySummary.totalGross || 0).toLocaleString()}
           </div>
           <div className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
             <ArrowUpRight className="w-3 h-3 text-emerald-600" />
@@ -532,10 +539,10 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
             <Award className="w-3.5 h-3.5 text-blue-600" />
           </span>
           <div className="text-lg sm:text-xl font-black text-blue-950">
-            ฿{weeklySummary.totalNet.toLocaleString()}
+            ฿{(weeklySummary.totalNet || 0).toLocaleString()}
           </div>
           <div className="text-[10px] text-blue-700 font-medium">
-            สัดส่วน {( (weeklySummary.totalNet / (weeklySummary.totalGross || 1)) * 100 ).toFixed(1)}% ของยอดรวม (หัก GP ฿{weeklySummary.totalGp.toLocaleString()})
+            สัดส่วน {( (weeklySummary.totalNet / (weeklySummary.totalGross || 1)) * 100 ).toFixed(1)}% ของยอดรวม (หัก GP ฿{(weeklySummary.totalGp || 0).toLocaleString()})
           </div>
         </div>
 
@@ -546,7 +553,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
             <Layers className="w-3.5 h-3.5 text-slate-600" />
           </span>
           <div className="text-lg sm:text-xl font-black text-slate-900">
-            ฿{weeklySummary.dailyAverageGross.toLocaleString()}
+            ฿{(weeklySummary.dailyAverageGross || 0).toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-600 font-medium flex items-center justify-between">
             <span>เฉลี่ยบิลละ: <strong className="text-slate-900 font-bold">฿{weeklySummary.weeklyAov}</strong></span>
@@ -561,11 +568,11 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
             <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
           </span>
           <div className="text-base sm:text-lg font-black text-amber-950 truncate">
-            {weeklySummary.peakDay.dayName} ({weeklySummary.peakDay.fullLabel})
+            {weeklySummary.peakDay?.dayName || 'วันนี้'} ({weeklySummary.peakDay?.fullLabel || ''})
           </div>
           <div className="text-[10px] font-extrabold text-amber-700 flex items-center justify-between">
-            <span>฿{weeklySummary.peakDay.grossSales.toLocaleString()}</span>
-            <span className="bg-amber-200/60 px-1.5 py-0.5 rounded text-[9px] text-amber-900">{weeklySummary.peakDay.totalOrders} ออเดอร์</span>
+            <span>฿{(weeklySummary.peakDay?.grossSales || 0).toLocaleString()}</span>
+            <span className="bg-amber-200/60 px-1.5 py-0.5 rounded text-[9px] text-amber-900">{weeklySummary.peakDay?.totalOrders || 0} ออเดอร์</span>
           </div>
         </div>
       </div>
@@ -579,7 +586,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-800">เป้าหมายยอดขายสัปดาห์นี้:</span>
-              <span className="font-extrabold text-slate-900">฿{weeklyGoal.toLocaleString()}</span>
+              <span className="font-extrabold text-slate-900">฿{(weeklyGoal || 0).toLocaleString()}</span>
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                 weeklySummary.totalGross >= weeklyGoal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
               }`}>
@@ -588,8 +595,8 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
             </div>
             <p className="text-[11px] text-slate-500">
               {weeklySummary.totalGross >= weeklyGoal
-                ? `ยอดขายทะลุเป้าหมายไปแล้ว +฿${(weeklySummary.totalGross - weeklyGoal).toLocaleString()} 🎉`
-                : `ต้องการอีก ฿${(weeklyGoal - weeklySummary.totalGross).toLocaleString()} เพื่อบรรลุเป้าหมาย`}
+                ? `ยอดขายทะลุเป้าหมายไปแล้ว +฿${Math.max(0, weeklySummary.totalGross - weeklyGoal).toLocaleString()} 🎉`
+                : `ต้องการอีก ฿${Math.max(0, weeklyGoal - weeklySummary.totalGross).toLocaleString()} เพื่อบรรลุเป้าหมาย`}
             </p>
           </div>
         </div>
@@ -1040,13 +1047,13 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs text-slate-300 mt-1 flex-wrap">
-              <span>ยอดขาย: <strong className="text-white font-bold">฿{selectedDayItem.grossSales.toLocaleString()}</strong></span>
+              <span>ยอดขาย: <strong className="text-white font-bold">฿{(selectedDayItem?.grossSales || 0).toLocaleString()}</strong></span>
               <span>•</span>
-              <span>หัก GP: <strong className="text-rose-300 font-bold">-฿{selectedDayItem.platformGp.toLocaleString()}</strong></span>
+              <span>หัก GP: <strong className="text-rose-300 font-bold">-฿{(selectedDayItem?.platformGp || 0).toLocaleString()}</strong></span>
               <span>•</span>
-              <span>เงินโอนสุทธิ: <strong className="text-emerald-400 font-extrabold">฿{selectedDayItem.netPayout.toLocaleString()}</strong></span>
+              <span>เงินโอนสุทธิ: <strong className="text-emerald-400 font-extrabold">฿{(selectedDayItem?.netPayout || 0).toLocaleString()}</strong></span>
               <span>•</span>
-              <span>{selectedDayItem.totalOrders} ออเดอร์ (เฉลี่ย ฿{selectedDayItem.aov}/บิล)</span>
+              <span>{selectedDayItem?.totalOrders || 0} ออเดอร์ (เฉลี่ย ฿{selectedDayItem?.aov || 0}/บิล)</span>
             </div>
           </div>
         </div>
@@ -1109,11 +1116,11 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
                   ) : null}
                 </div>
                 <div className={`text-xs font-black mt-1 ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}>
-                  ฿{item.grossSales.toLocaleString()}
+                  ฿{(item.grossSales || 0).toLocaleString()}
                 </div>
                 <div className={`text-[10px] flex items-center justify-between mt-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                  <span>{item.totalOrders} บิล</span>
-                  <span className="font-medium text-[9px] opacity-80">Net: ฿{item.netPayout.toLocaleString()}</span>
+                  <span>{item.totalOrders || 0} บิล</span>
+                  <span className="font-medium text-[9px] opacity-80">Net: ฿{(item.netPayout || 0).toLocaleString()}</span>
                 </div>
               </button>
             );
