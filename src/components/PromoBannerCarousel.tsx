@@ -36,6 +36,21 @@ interface PromoBannerItem {
 
 const PROMO_BANNERS: PromoBannerItem[] = [
   {
+    id: 'promo-lineman-campaign',
+    badge: 'คนละครึ่ง x2 • LINE MAN แจกเพิ่ม',
+    badgeColor: 'bg-emerald-400 text-slate-950 font-black',
+    title: 'อิ่มคุ้มทุกมื้อ แจกโค้ดลดเพิ่ม 800+ บ.',
+    highlightText: 'ลดสูงสุด 50% + ส่งฟรี 0 บาททุกร้านดัง',
+    description: 'สั่งอาหารและของสดจากซูเปอร์มาร์เก็ตชั้นนำ รับเงินคืนและคูปองส่วนลดพิเศษทุกวัน',
+    couponCode: 'LINEMAN800',
+    discountBadge: 'โค้ดลด ฿800+',
+    restaurantId: 'rest_1',
+    ctaText: 'ใช้โค้ดลดเลย',
+    bgGradient: 'from-emerald-950/90 via-[#00BA76]/80 to-slate-900/85',
+    imageUrl: '/src/assets/images/promo_banner_green_1789709495074.jpg',
+    category: 'แคมเปญสุดคุ้ม'
+  },
+  {
     id: 'promo-1',
     badge: 'Seasonal Mega Deal • ดีลเด็ดสิ้นสุดสัปดาห์นี้',
     badgeColor: 'bg-amber-400 text-slate-950',

@@ -83,27 +83,27 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
           </div>
         ) : (
           <div
-            className={`relative transition-all duration-300 w-full max-w-[412px] bg-slate-50 shadow-2xl overflow-hidden flex flex-col text-slate-900 ${
+            className={`relative transition-all duration-300 w-full max-w-[412px] bg-slate-50 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col text-slate-900 ${
               deviceMode === 'ios'
-                ? 'rounded-[50px] border-[10px] border-slate-800 ring-1 ring-slate-700 min-h-[844px] max-h-[92vh]'
-                : 'rounded-[36px] border-[8px] border-slate-800 ring-1 ring-slate-700 min-h-[844px] max-h-[92vh]'
+                ? 'rounded-[50px] border-[10px] border-slate-200 ring-1 ring-slate-300 min-h-[844px] max-h-[94vh]'
+                : 'rounded-[36px] border-[8px] border-slate-700 ring-1 ring-slate-600 min-h-[844px] max-h-[94vh]'
             }`}
           >
-            {/* Native OS Status Bar */}
-            <div className="w-full bg-slate-900 text-white px-7 pt-3 pb-2 flex items-center justify-between select-none z-30 shrink-0">
-              <span className="text-xs font-semibold tracking-tight">{currentTime}</span>
+            {/* Native OS Status Bar - Seamless Green from Reference Image */}
+            <div className="w-full bg-gradient-to-r from-[#00BA76] to-[#00A366] text-white px-7 pt-3.5 pb-2 flex items-center justify-between select-none z-30 shrink-0 shadow-2xs">
+              <span className="text-xs font-bold tracking-tight">9:41</span>
 
               {/* Dynamic Island or Camera Punch */}
               {deviceMode === 'ios' ? (
                 <div className="w-24 h-4.5 bg-black rounded-full flex items-center justify-end px-2 gap-1.5 shadow-inner">
                   <div className="w-2 h-2 rounded-full bg-slate-900 border border-slate-800" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/80 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/90 animate-pulse" />
                 </div>
               ) : (
                 <div className="w-3.5 h-3.5 bg-black rounded-full shadow-inner mx-auto" />
               )}
 
-              <div className="flex items-center gap-1.5 text-xs text-slate-300">
+              <div className="flex items-center gap-1.5 text-xs text-white">
                 <Wifi className="w-3.5 h-3.5" />
                 <span className="text-[10px] font-bold">5G</span>
                 <Battery className="w-4 h-4" />
@@ -111,16 +111,16 @@ export const DeviceFrame: React.FC<DeviceFrameProps> = ({ children }) => {
             </div>
 
             {/* Inner App Content with scroll */}
-            <div className="flex-1 overflow-y-auto flex flex-col relative bg-slate-50">
+            <div className="flex-1 overflow-y-auto flex flex-col relative bg-[#F6F8F7]">
               {children}
             </div>
 
             {/* Native Home Indicator Bar (iOS / Android) */}
-            <div className="w-full bg-slate-900/95 py-2 flex items-center justify-center shrink-0 z-30">
+            <div className="w-full bg-white py-2 flex items-center justify-center shrink-0 z-30 border-t border-slate-100">
               {deviceMode === 'ios' ? (
-                <div className="w-32 h-1 bg-slate-500 rounded-full" />
+                <div className="w-32 h-1 bg-slate-300 rounded-full" />
               ) : (
-                <div className="w-20 h-1 bg-slate-600 rounded-full" />
+                <div className="w-20 h-1 bg-slate-400 rounded-full" />
               )}
             </div>
           </div>

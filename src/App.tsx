@@ -45,9 +45,9 @@ const AppContent: React.FC = () => {
 
   return (
     <DeviceFrame>
-      <div className="flex flex-col h-full bg-slate-100 font-sans relative">
-        {/* Fixed Header */}
-        <Header />
+      <div className="flex flex-col h-full bg-[#F6F8F7] font-sans relative">
+        {/* Fixed Header (on non-home screens) */}
+        {activeTab !== 'home' && <Header />}
 
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto pb-24 no-scrollbar">

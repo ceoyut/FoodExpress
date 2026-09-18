@@ -62,6 +62,8 @@ import {
   INITIAL_RIDER_PAYOUT_SLIPS
 } from '../data/riderData';
 import { TRANSLATIONS, Language } from '../data/translations';
+import { createCloudOrder, subscribeToOrders } from '../lib/firebase';
+import { merchantOrderAudio } from '../utils/merchantOrderAudio';
 
 interface ToastState {
   title: string;
@@ -113,6 +115,7 @@ interface AppContextType {
   
   // Orders & Live Tracking
   orders: Order[];
+  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   activeOrder: Order | null;
   setActiveOrder: (order: Order | null) => void;
   placeOrder: (
@@ -120,6 +123,7 @@ interface AppContextType {
     address: string, 
     notes?: string
   ) => Promise<Order>;
+  simulateIncomingOrder: (restaurantId: string) => Order;
   reorderOrder: (order: Order) => {
     items: CartItem[];
     subtotal: number;
@@ -307,6 +311,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return INITIAL_ORDERS;
     }
   });
+
+  // Listen to orders from Firebase Cloud Firestore in real time
+  useEffect(() => {
+    const unsub = subscribeToOrders((cloudOrders) => {
+      if (!cloudOrders || cloudOrders.length === 0) return;
+      setOrders(prev => {
+        const merged = [...prev];
+        cloudOrders.forEach(co => {
+          const idx = merged.findIndex(o => o.id === co.id);
+          const mappedOrder: Order = {
+            id: co.id,
+            restaurantId: co.restaurantId,
+            restaurantName: co.restaurantName,
+            restaurantLogo: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=100&auto=format&fit=crop&q=60',
+            items: co.items?.map(it => ({
+              cartItemId: it.id,
+              menuItem: {
+                id: it.id,
+                restaurantId: co.restaurantId,
+                name: it.name,
+                price: it.price,
+                description: '',
+                image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80',
+                category: 'ยอดนิยม',
+                isPopular: true
+              },
+              restaurantId: co.restaurantId,
+              restaurantName: co.restaurantName,
+              quantity: it.quantity,
+              unitPrice: it.price,
+              selectedOptions: {}
+            })) || [],
+            status: (co.orderStatus === 'completed' ? 'delivered' : (co.orderStatus === 'delivering' ? 'on_the_way' : (co.orderStatus === 'rider_pickup' ? 'picked_up' : 'preparing'))) as any,
+            subtotal: co.subtotal || co.totalAmount,
+            deliveryFee: co.deliveryFee || 0,
+            discountAmount: co.discount || 0,
+            pointsUsed: 0,
+            total: co.totalAmount,
+            pointsEarned: Math.floor(co.totalAmount / 10),
+            paymentMethod: (co.paymentMethod as any) || 'promptpay_qr',
+            paymentStatus: (co.paymentStatus as any) || 'paid',
+            deliveryAddress: co.deliveryAddress,
+            createdAt: typeof co.createdAt === 'string' ? co.createdAt : 'เมื่อสักครู่',
+            estimatedDeliveryMinutes: 20,
+            rider: { ...DEFAULT_RIDER },
+            riderProgressPct: co.orderStatus === 'completed' ? 100 : (co.orderStatus === 'delivering' ? 70 : 30),
+            riderCurrentLocation: { x: 50, y: 50 },
+            hasReviewed: false
+          };
+          if (idx > -1) {
+            merged[idx] = { ...merged[idx], ...mappedOrder };
+          } else {
+            merged.unshift(mappedOrder);
+          }
+        });
+        return merged;
+      });
+    });
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
 
   const [activeOrder, setActiveOrder] = useState<Order | null>(() => {
     try {
@@ -1627,6 +1694,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setOrders(prev => [newOrder, ...prev]);
     setActiveOrder(newOrder);
+
+    // Save order to Firebase Cloud Firestore
+    createCloudOrder({
+      id: newOrder.id,
+      restaurantId: newOrder.restaurantId,
+      restaurantName: newOrder.restaurantName,
+      customerName: user.name,
+      customerPhone: user.phone,
+      deliveryAddress: newOrder.deliveryAddress,
+      itemsSummary: newOrder.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', '),
+      items: newOrder.items.map(i => ({
+        id: i.cartItemId,
+        name: i.menuItem.name,
+        price: i.unitPrice,
+        quantity: i.quantity,
+      })),
+      subtotal: newOrder.subtotal,
+      deliveryFee: newOrder.deliveryFee,
+      discount: newOrder.discountAmount,
+      tip: 0,
+      totalAmount: newOrder.total,
+      paymentMethod: (newOrder.paymentMethod as any) || 'promptpay_qr',
+      paymentStatus: (newOrder.paymentStatus as any) || 'paid',
+      orderStatus: 'kitchen_prep',
+      transactionRef: `TXN-${Date.now().toString().slice(-6)}`,
+      riderId: newOrder.rider.id,
+      riderName: newOrder.rider.name,
+    }).catch(err => {
+      console.warn('Firebase order persist notice:', err);
+    });
+
     setCart([]);
     setCartRestaurant(null);
     setAppliedCoupon(null);
@@ -1681,8 +1779,109 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     triggerToast('สั่งซื้อสำเร็จ!', `ออเดอร์ ${newOrder.id} ยืนยันแล้ว รับ +${pointsEarned} คะแนนสะสม`, 'reward');
 
+    // Trigger visual browser notification for merchant
+    try {
+      merchantOrderAudio.sendVisualBrowserNotification('🚨 มีออเดอร์ใหม่เข้ามา! (New Order Placed)', {
+        body: `ออเดอร์ #${newOrder.id} • ยอด ฿${newOrder.total.toLocaleString()} จากคุณ ${user.name || 'ลูกค้า'} (${newOrder.items.length} รายการ)`,
+        icon: newOrder.restaurantLogo,
+        tag: newOrder.id,
+      });
+    } catch {
+      // Safe fallback
+    }
+
     return newOrder;
   }, [cartRestaurant, cart, appliedCoupon, cartDeliveryFee, cartSubtotal, user.walletBalance, user.name, triggerToast, merchantSettlements]);
+
+  // Simulate an incoming customer order for merchant POS alert
+  const simulateIncomingOrder = useCallback((restaurantId: string): Order => {
+    const restaurant = RESTAURANTS_DATA.find(r => r.id === restaurantId) || RESTAURANTS_DATA[0];
+    const menuItems = restaurant.menu.length > 0 ? restaurant.menu : RESTAURANTS_DATA[0].menu;
+    const item1 = menuItems[0] || RESTAURANTS_DATA[0].menu[0];
+    const item2 = menuItems[1] || item1;
+
+    const thaiNames = [
+      'คุณธนกร รุ่งอรุณ',
+      'คุณวิภา สุวรรณเวช',
+      'คุณณัฐพงศ์ เกียรติไพบูลย์',
+      'คุณศศิธร เจริญทรัพย์',
+      'คุณกิตติศักดิ์ พรหมมินทร์'
+    ];
+    const randomCustomer = thaiNames[Math.floor(Math.random() * thaiNames.length)];
+    const addresses = [
+      'อาคารเสริมมิตรทาวเวอร์ ชั้น 18 ซอยสุขุมวิท 21 แขวงคลองเตยเหนือ กรุงเทพฯ',
+      'คอนโด เดอะ เบส สุขุมวิท 77 ตึก A ห้อง 814 แขวงพระโขนงเหนือ กรุงเทพฯ',
+      'บ้านเลขที่ 98/42 หมู่บ้านนันทวัน ศรีนครินทร์ ต.บางแก้ว อ.บางพลี',
+      'อาคาร ซีดับเบิ้ลยู ทาวเวอร์ ชั้น 12 ถนนรัชดาภิเษก แขวงห้วยขวาง กรุงเทพฯ'
+    ];
+    const randomAddress = addresses[Math.floor(Math.random() * addresses.length)];
+
+    const cartItems: CartItem[] = [
+      {
+        cartItemId: `${item1.id}_sim_${Date.now()}_1`,
+        menuItem: item1,
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        quantity: Math.floor(Math.random() * 2) + 1,
+        unitPrice: item1.price,
+        selectedOptions: {},
+        spicyLevel: 'ปกติ',
+        notes: 'ขอช้อนส้อมพลาสติกด้วยครับ'
+      }
+    ];
+
+    if (item2 && item2.id !== item1.id) {
+      cartItems.push({
+        cartItemId: `${item2.id}_sim_${Date.now()}_2`,
+        menuItem: item2,
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        quantity: 1,
+        unitPrice: item2.price,
+        selectedOptions: {},
+        spicyLevel: 'เผ็ดน้อย',
+      });
+    }
+
+    const subtotal = cartItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
+    const deliveryFee = 25;
+    const total = subtotal + deliveryFee;
+
+    const newOrder: Order = {
+      id: `ORD-${Math.floor(100000 + Math.random() * 900000)}`,
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      restaurantLogo: restaurant.logoImage,
+      items: cartItems,
+      status: 'confirmed',
+      subtotal,
+      deliveryFee,
+      discountAmount: 0,
+      pointsUsed: 0,
+      total,
+      pointsEarned: Math.floor(total / 10),
+      paymentMethod: Math.random() > 0.5 ? 'promptpay_qr' : 'wallet',
+      paymentStatus: 'paid',
+      deliveryAddress: randomAddress,
+      notes: `ลูกค้า: ${randomCustomer} • ฝากแขวนไว้ที่ป้อม รปภ. ได้เลยครับ`,
+      createdAt: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+      estimatedDeliveryMinutes: 25,
+      rider: { ...DEFAULT_RIDER },
+      riderProgressPct: 15,
+      hasReviewed: false,
+    };
+
+    setOrders(prev => [newOrder, ...prev]);
+
+    addNotification({
+      title: `🛍️ ลูกค้าสั่งออเดอร์ใหม่ #${newOrder.id}`,
+      body: `ร้าน ${restaurant.name} ได้รับออเดอร์ใหม่ ยอดรวม ฿${total.toLocaleString()}`,
+      type: 'order',
+      targetId: newOrder.id,
+    });
+
+    return newOrder;
+  }, [addNotification]);
 
   // Cancel order
   const cancelActiveOrder = useCallback(() => {
@@ -2129,9 +2328,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAppliedCoupon,
       redeemCouponWithPoints,
       orders,
+      setOrders,
       activeOrder,
       setActiveOrder,
       placeOrder,
+      simulateIncomingOrder,
       reorderOrder,
       cancelActiveOrder,
       speedUpTracking,

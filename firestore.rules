@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow reading and placing customer orders
+    match /orders/{orderId} {
+      allow read, create, update: if true;
+    }
+    // Allow payment tracking and gateway verification
+    match /payments/{paymentId} {
+      allow read, create, update: if true;
+    }
+    // Merchant daily settlement ledger
+    match /settlements/{settlementId} {
+      allow read, write: if true;
+    }
+  }
+}

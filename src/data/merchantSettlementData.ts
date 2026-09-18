@@ -28,6 +28,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: true,
       minPendingPayoutThreshold: 5000,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 5000,
     },
   },
   rest_2: {
@@ -49,6 +50,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: true,
       minPendingPayoutThreshold: 3000,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 4000,
     },
   },
   rest_3: {
@@ -70,6 +72,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: true,
       minPendingPayoutThreshold: 5000,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 6500,
     },
   },
   rest_4: {
@@ -91,6 +94,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: false,
       minPendingPayoutThreshold: 2500,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 3000,
     },
   },
   rest_5: {
@@ -112,6 +116,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: true,
       minPendingPayoutThreshold: 4000,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 4500,
     },
   },
   rest_6: {
@@ -133,6 +138,7 @@ export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccoun
       enableInstantPushNotifications: true,
       minPendingPayoutThreshold: 3000,
       enablePendingPayoutAlert: true,
+      dailySalesGoal: 2500,
     },
   },
 };
@@ -244,6 +250,7 @@ export function computeMerchantSettlement(
     cashCollectedByStore,
     netPayoutPayable,
     totalTipsReceived,
+    dailySalesGoal: config.dailySalesGoal || 5000,
     status: 'calculated',
     config,
     bankAccount,

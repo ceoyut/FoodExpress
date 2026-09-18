@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Wallet, X, QrCode, CreditCard, Check, Sparkles, AlertTriangle } from 'lucide-react';
+import { PaymentGatewayModal } from './PaymentGatewayModal';
 
 interface WalletTopUpModalProps {
   onClose: () => void;
@@ -11,18 +12,19 @@ export const WalletTopUpModal: React.FC<WalletTopUpModalProps> = ({ onClose }) =
   const [amount, setAmount] = useState<number>(300);
   const [method, setMethod] = useState<'promptpay' | 'card'>('promptpay');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGatewayOpen, setIsGatewayOpen] = useState(false);
 
   const isLowBalance = user.walletBalance < walletLowBalanceThreshold;
   const presetAmounts = [100, 300, 500, 1000];
 
-  const handleTopUp = async () => {
+  const handleTopUp = () => {
     if (amount <= 0) return;
-    setIsProcessing(true);
+    setIsGatewayOpen(true);
+  };
 
-    // Simulate gateway delay
-    await new Promise(r => setTimeout(r, 800));
+  const handleGatewaySuccess = (txnRef: string) => {
+    setIsGatewayOpen(false);
     topUpWallet(amount);
-    setIsProcessing(false);
     onClose();
   };
 
@@ -197,6 +199,17 @@ export const WalletTopUpModal: React.FC<WalletTopUpModalProps> = ({ onClose }) =
           </button>
         </div>
       </div>
+
+      {isGatewayOpen && (
+        <PaymentGatewayModal
+          orderId={`TOPUP-${Date.now().toString().slice(-6)}`}
+          amount={amount}
+          channel={method === 'card' ? 'credit_card' : 'promptpay_qr'}
+          merchantName="FoodExpress Wallet Top-up"
+          onSuccess={handleGatewaySuccess}
+          onCancel={() => setIsGatewayOpen(false)}
+        />
+      )}
     </div>
   );
 };

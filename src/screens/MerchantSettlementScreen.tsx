@@ -40,13 +40,19 @@ import {
   UserCheck,
   LogIn,
   UserPlus,
-  LogOut
+  LogOut,
+  Trophy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { MerchantDailySettlement, MerchantOrderReconciliationItem } from '../types';
 import { WeeklyRevenueSummaryView } from '../components/WeeklyRevenueSummaryView';
 import { GP_PACKAGES } from '../data/merchantAuthData';
+import { SettlementSummaryAlert } from '../components/SettlementSummaryAlert';
+import { NewOrderAlertModal } from '../components/NewOrderAlertModal';
+import { MerchantOrderAlertControlBar } from '../components/MerchantOrderAlertControlBar';
+import { merchantOrderAudio } from '../utils/merchantOrderAudio';
+import { Order } from '../types';
 
 export const MerchantSettlementScreen: React.FC = () => {
   const {
@@ -55,6 +61,9 @@ export const MerchantSettlementScreen: React.FC = () => {
     setSelectedSettlementRestId,
     selectedSettlementDate,
     setSelectedSettlementDate,
+    orders,
+    setOrders,
+    simulateIncomingOrder,
     runEodSettlementCalculation,
     approveAndTransferPayout,
     updateMerchantConfig,
@@ -75,6 +84,156 @@ export const MerchantSettlementScreen: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
   const [isTransferConfirmOpen, setIsTransferConfirmOpen] = useState(false);
+
+  // Order Alert & Visual Notification states
+  const [isAlertSoundMuted, setIsAlertSoundMuted] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('merchant_sound_muted');
+      return saved ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+  const [activeAlertOrder, setActiveAlertOrder] = useState<Order | null>(null);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
+  const [acknowledgedOrderIds, setAcknowledgedOrderIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('merchant_acknowledged_orders');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // Track initial orders on mount so we only alert on newly placed incoming customer orders
+  const knownOrderIdsRef = useRef<Set<string>>(new Set(orders.map(o => o.id)));
+
+  // Listen to new incoming orders for merchant
+  useEffect(() => {
+    const unacknowledged = orders.filter(order => {
+      const isForCurrentRest = order.restaurantId === selectedSettlementRestId;
+      const isAlreadyAck = acknowledgedOrderIds.has(order.id);
+      const isNew = !knownOrderIdsRef.current.has(order.id);
+      return isForCurrentRest && !isAlreadyAck && isNew;
+    });
+
+    if (unacknowledged.length > 0) {
+      const newOrder = unacknowledged[0];
+      knownOrderIdsRef.current.add(newOrder.id);
+
+      setActiveAlertOrder(newOrder);
+      setIsAlertModalOpen(true);
+
+      merchantOrderAudio.setSoundMuted(isAlertSoundMuted);
+      merchantOrderAudio.startLoopingOrderAlert();
+
+      merchantOrderAudio.sendVisualBrowserNotification('🚨 มีออเดอร์ใหม่เข้ามา! (New Order Placed)', {
+        body: `ออเดอร์ #${newOrder.id} • ยอด ฿${newOrder.total.toLocaleString()} (${newOrder.items.length} รายการ) กรุณากดรับทราบทันที`,
+        icon: newOrder.restaurantLogo,
+        tag: newOrder.id,
+        onClick: () => {
+          setIsAlertModalOpen(true);
+          setActiveAlertOrder(newOrder);
+        }
+      });
+
+      triggerToast(
+        '🚨 มีออเดอร์ใหม่เข้ามา!',
+        `ออเดอร์ #${newOrder.id} ยอด ฿${newOrder.total.toLocaleString()} รอการกดรับทราบ`,
+        'reward'
+      );
+    }
+  }, [orders, selectedSettlementRestId, acknowledgedOrderIds, isAlertSoundMuted, triggerToast]);
+
+  // Clean up looping sound on unmount
+  useEffect(() => {
+    return () => {
+      merchantOrderAudio.stopLoopingOrderAlert();
+    };
+  }, []);
+
+  // Compute unacknowledged orders count for current merchant restaurant
+  const unacknowledgedOrders = useMemo(() => {
+    return orders.filter(
+      o => o.restaurantId === selectedSettlementRestId && 
+           !acknowledgedOrderIds.has(o.id) && 
+           o.status !== 'delivered' && 
+           o.status !== 'cancelled'
+    );
+  }, [orders, selectedSettlementRestId, acknowledgedOrderIds]);
+
+  const handleAcknowledgeOrder = (orderId: string) => {
+    merchantOrderAudio.stopLoopingOrderAlert();
+    merchantOrderAudio.playOrderAlertChime();
+
+    setAcknowledgedOrderIds(prev => {
+      const next = new Set(prev);
+      next.add(orderId);
+      try {
+        localStorage.setItem('merchant_acknowledged_orders', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'preparing' } : o));
+
+    setIsAlertModalOpen(false);
+    setActiveAlertOrder(null);
+
+    triggerToast(
+      'รับออเดอร์สำเร็จ! 👨‍🍳',
+      `ยืนยันรับทราบออเดอร์ #${orderId} เรียบร้อย ครัวกำลังจัดเตรียมอาหาร`,
+      'success'
+    );
+  };
+
+  const handleToggleAlertSound = () => {
+    setIsAlertSoundMuted(prev => {
+      const next = !prev;
+      merchantOrderAudio.setSoundMuted(next);
+      try {
+        localStorage.setItem('merchant_sound_muted', JSON.stringify(next));
+      } catch {}
+      triggerToast(
+        next ? 'ปิดเสียงเตือนออเดอร์แล้ว 🔇' : 'เปิดเสียงเตือนออเดอร์แล้ว 🔊',
+        next ? 'ระบบจะไม่ส่งเสียงเมื่อมีออเดอร์เข้า' : 'ระบบจะส่งเสียงกระดิ่ง POS วนซ้ำเมื่อมีออเดอร์เข้า',
+        'info'
+      );
+      return next;
+    });
+  };
+
+  const handleTestAlertSound = () => {
+    merchantOrderAudio.setSoundMuted(false);
+    merchantOrderAudio.playOrderAlertChime();
+    triggerToast('ทดสอบเสียงแจ้งเตือน 🔔', 'เล่นเสียงกระดิ่งเตือนออเดอร์ใหม่ (POS 3-tone chime)', 'info');
+  };
+
+  const handleSimulateIncomingOrder = () => {
+    const newOrder = simulateIncomingOrder(selectedSettlementRestId);
+
+    setActiveAlertOrder(newOrder);
+    setIsAlertModalOpen(true);
+
+    merchantOrderAudio.setSoundMuted(isAlertSoundMuted);
+    merchantOrderAudio.startLoopingOrderAlert();
+
+    merchantOrderAudio.sendVisualBrowserNotification('🚨 มีออเดอร์ใหม่เข้ามา! (New Order Placed)', {
+      body: `ออเดอร์ #${newOrder.id} • ยอด ฿${newOrder.total.toLocaleString()} (${newOrder.items.length} รายการ) กรุณากดรับทราบทันที`,
+      icon: newOrder.restaurantLogo,
+      tag: newOrder.id,
+      onClick: () => {
+        setIsAlertModalOpen(true);
+        setActiveAlertOrder(newOrder);
+      }
+    });
+
+    triggerToast(
+      'จำลองออเดอร์ใหม่สำเร็จ 🔔',
+      `สร้างออเดอร์ #${newOrder.id} เรียบร้อย ส่งเสียงเตือนและแจ้งเตือนเบราว์เซอร์แล้ว`,
+      'reward'
+    );
+  };
 
   // Available dates for tab selection
   const availableDates = [
@@ -102,6 +261,7 @@ export const MerchantSettlementScreen: React.FC = () => {
   const [editInstantPush, setEditInstantPush] = useState<boolean>(currentSettlement?.config?.enableInstantPushNotifications ?? true);
   const [editMinPendingThreshold, setEditMinPendingThreshold] = useState<number>(currentSettlement?.config?.minPendingPayoutThreshold || 5000);
   const [editEnablePendingAlert, setEditEnablePendingAlert] = useState<boolean>(currentSettlement?.config?.enablePendingPayoutAlert ?? true);
+  const [editDailySalesGoal, setEditDailySalesGoal] = useState<number>(currentSettlement?.config?.dailySalesGoal || 5000);
   const [editBankName, setEditBankName] = useState<string>(currentSettlement?.bankAccount?.bankName || '');
   const [editAccountNum, setEditAccountNum] = useState<string>(currentSettlement?.bankAccount?.accountNumber || '');
   const [editAccountName, setEditAccountName] = useState<string>(currentSettlement?.bankAccount?.accountName || '');
@@ -334,6 +494,7 @@ export const MerchantSettlementScreen: React.FC = () => {
       setEditInstantPush(currentSettlement.config.enableInstantPushNotifications ?? true);
       setEditMinPendingThreshold(currentSettlement.config.minPendingPayoutThreshold || 5000);
       setEditEnablePendingAlert(currentSettlement.config.enablePendingPayoutAlert ?? true);
+      setEditDailySalesGoal(currentSettlement.config.dailySalesGoal || 5000);
       setEditBankName(currentSettlement.bankAccount.bankName);
       setEditAccountNum(currentSettlement.bankAccount.accountNumber);
       setEditAccountName(currentSettlement.bankAccount.accountName);
@@ -347,6 +508,7 @@ export const MerchantSettlementScreen: React.FC = () => {
     if (!currentSettlement) return;
 
     const thresholdNum = Math.max(0, Number(editMinPendingThreshold) || 0);
+    const goalNum = Math.max(500, Number(editDailySalesGoal) || 5000);
 
     updateMerchantConfig(currentSettlement.restaurantId, {
       gpRatePct: Number(editGpRate),
@@ -356,6 +518,7 @@ export const MerchantSettlementScreen: React.FC = () => {
       enableInstantPushNotifications: editInstantPush,
       minPendingPayoutThreshold: thresholdNum,
       enablePendingPayoutAlert: editEnablePendingAlert,
+      dailySalesGoal: goalNum,
     });
 
     updateMerchantBank(currentSettlement.restaurantId, {
@@ -907,6 +1070,36 @@ export const MerchantSettlementScreen: React.FC = () => {
           </div>
         </div>
       </div>
+ 
+      {/* Live Merchant Incoming Order Alert & Notification Controls */}
+      <MerchantOrderAlertControlBar
+        isSoundMuted={isAlertSoundMuted}
+        onToggleSound={handleToggleAlertSound}
+        onTestSound={handleTestAlertSound}
+        onSimulateIncomingOrder={handleSimulateIncomingOrder}
+        unacknowledgedCount={unacknowledgedOrders.length}
+        onOpenPendingModal={() => {
+          if (unacknowledgedOrders.length > 0) {
+            setActiveAlertOrder(unacknowledgedOrders[0]);
+            setIsAlertModalOpen(true);
+            merchantOrderAudio.setSoundMuted(isAlertSoundMuted);
+            merchantOrderAudio.startLoopingOrderAlert();
+          } else {
+            handleSimulateIncomingOrder();
+          }
+        }}
+      />
+
+      {/* Summary Alert: Daily Sales Goals Met & Pending Payout Status */}
+      {currentSettlement && (
+        <SettlementSummaryAlert
+          settlement={currentSettlement}
+          restaurantName={currentRestaurant.name}
+          onOpenTransferConfirm={() => setIsTransferConfirmOpen(true)}
+          onOpenSettings={handleOpenSettings}
+          onQuickRefresh={handleQuickRefresh}
+        />
+      )}
 
       {/* Main Settlement Highlight Card */}
       {currentSettlement && (
@@ -936,7 +1129,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                   <span>รอบสรุปยอด: {currentSettlement.dateDisplayTh}</span>
                   <span>•</span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30">
-                    สัญญา GP: {currentSettlement.config.gpRatePct}% ({GP_PACKAGES.find(p => p.gpRatePct === currentSettlement.config.gpRatePct)?.nameTh || 'Custom GP'})
+                    สัญญา GP: {currentSettlement.config.gpRatePct}% ({GP_PACKAGES.find(p => p.ratePct === currentSettlement.config.gpRatePct)?.nameTh || 'Custom GP'})
                   </span>
                   <span>•</span>
                   <span>{currentSettlement.config.isCorporate ? 'นิติบุคคล (WHT 3%)' : 'บุคคลธรรมดา'}</span>
@@ -1210,7 +1403,7 @@ export const MerchantSettlementScreen: React.FC = () => {
       )}
 
       {/* Live Reconciliation Audit Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
+      <div id="merchant-orders-breakdown-section" className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-4 sm:p-5 space-y-4">
         {/* Table header & controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
@@ -1402,17 +1595,17 @@ export const MerchantSettlementScreen: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                       {GP_PACKAGES.map(pkg => (
                         <button
-                          key={pkg.id}
+                          key={pkg.tier}
                           type="button"
-                          onClick={() => setEditGpRate(pkg.gpRatePct)}
+                          onClick={() => setEditGpRate(pkg.ratePct)}
                           className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                            editGpRate === pkg.gpRatePct
+                            editGpRate === pkg.ratePct
                               ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-500'
                               : 'bg-white hover:bg-slate-100 border-slate-200'
                           }`}
                         >
                           <div className="text-[11px] font-black text-slate-900">{pkg.nameTh}</div>
-                          <div className="text-[10px] font-extrabold text-emerald-600">GP {pkg.gpRatePct}%</div>
+                          <div className="text-[10px] font-extrabold text-emerald-600">GP {pkg.ratePct}%</div>
                         </button>
                       ))}
                     </div>
@@ -1696,6 +1889,115 @@ export const MerchantSettlementScreen: React.FC = () => {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* Daily Sales Goal Configuration */}
+                <div className="space-y-3 bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                      <Trophy className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs">
+                        เป้าหมายยอดขายประจำวัน (Daily Sales Goal)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        เมื่อยอดขายรวมถึงเป้าหมาย ระบบจะแสดงการแจ้งเตือนสรุปความสำเร็จ (Goal Met Alert)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-slate-700">
+                        เป้าหมายยอดขายรวม (บาท / วัน):
+                      </label>
+                      <span className="text-[10px] text-emerald-800 font-bold">
+                        แนะนำ ฿3,000 - ฿20,000
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                        ฿
+                      </span>
+                      <input
+                        type="number"
+                        id="input-daily-sales-goal-setting"
+                        min="500"
+                        max="200000"
+                        step="500"
+                        value={editDailySalesGoal}
+                        onChange={e => setEditDailySalesGoal(Math.max(500, Number(e.target.value)))}
+                        className="w-full pl-8 pr-12 py-2 rounded-xl border border-emerald-300 bg-white font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-2xs"
+                        placeholder="5000"
+                        required
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">
+                        บาท
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Preset goal buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-500 font-medium">เป้าหมายยอดนิยม:</span>
+                    {[3000, 5000, 7500, 10000, 15000].map(val => {
+                      const isActive = editDailySalesGoal === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setEditDailySalesGoal(val)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-emerald-600 text-white shadow-2xs'
+                              : 'bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-200'
+                          }`}
+                        >
+                          ฿{val.toLocaleString()}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Real-time comparison preview */}
+                  <div className="p-2.5 rounded-xl bg-white/90 border border-emerald-200 text-[11px] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">ยอดขายรวมปัจจุบัน:</span>
+                      <span className="font-bold text-emerald-700">
+                        ฿{(currentSettlement?.grossSales || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    {(() => {
+                      const currentSales = currentSettlement?.grossSales || 0;
+                      const targetGoal = editDailySalesGoal || 1;
+                      const ratio = Math.min(100, Math.round((currentSales / targetGoal) * 100));
+                      const isMet = currentSales >= targetGoal;
+
+                      return (
+                        <div>
+                          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                            <div
+                              className={`h-full transition-all duration-300 rounded-full ${
+                                isMet ? 'bg-emerald-500' : 'bg-slate-400'
+                              }`}
+                              style={{ width: `${ratio}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] mt-1 font-bold">
+                            <span className={isMet ? 'text-emerald-700' : 'text-slate-500'}>
+                              {isMet ? `🎉 ถึงเป้าหมายแล้ว (+฿${(currentSales - targetGoal).toLocaleString()})` : `ยังขาดอีก ฿${(targetGoal - currentSales).toLocaleString()}`}
+                            </span>
+                            <span className={isMet ? 'text-emerald-700' : 'text-slate-600'}>
+                              {Math.round((currentSales / targetGoal) * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* Bank Account Details */}
@@ -1982,6 +2284,19 @@ export const MerchantSettlementScreen: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* New Incoming Customer Order Alert & Acknowledgment Modal */}
+      <NewOrderAlertModal
+        order={activeAlertOrder}
+        isOpen={isAlertModalOpen}
+        onAcknowledge={handleAcknowledgeOrder}
+        onClose={() => {
+          merchantOrderAudio.stopLoopingOrderAlert();
+          setIsAlertModalOpen(false);
+        }}
+        isMuted={isAlertSoundMuted}
+        onToggleMute={handleToggleAlertSound}
+      />
     </div>
   );
 };

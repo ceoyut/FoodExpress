@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { PaymentMethod } from '../types';
+import { PaymentGatewayModal } from './PaymentGatewayModal';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -32,12 +33,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose }) => {
     triggerToast 
   } = useApp();
 
-  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('wallet');
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('promptpay_qr');
   const [deliveryAddress, setDeliveryAddress] = useState(
     user.savedAddresses.find(a => a.isDefault)?.address || user.savedAddresses[0]?.address || ''
   );
   const [driverNotes, setDriverNotes] = useState('ฝากไว้ที่จุดรับของคอนโด / โทรแจ้งเมื่อถึง');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isGatewayOpen, setIsGatewayOpen] = useState(false);
 
   // Credit card dummy form states
   const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8892');
@@ -63,18 +65,37 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose }) => {
 
   const handleConfirmOrder = async () => {
     if (isWalletInsufficient) {
-      triggerToast('ยอดเงินวอลเล็ตไม่พอ', 'กรุณาเติมเงินวอลเล็ต หรือเลือกชำระผ่านบัตรเครดิต', 'info');
+      triggerToast('ยอดเงินวอลเล็ตไม่พอ', 'กรุณาเติมเงินวอลเล็ต หรือเลือกชำระผ่านพร้อมเพย์ / บัตรเครดิต', 'info');
+      return;
+    }
+
+    if (selectedPayment === 'promptpay_qr' || selectedPayment === 'credit_card') {
+      // Open real-time Payment Gateway Modal
+      setIsGatewayOpen(true);
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Simulate bank / payment gateway verification delay (1.2s)
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Wallet or Cash direct settlement
+      await new Promise(resolve => setTimeout(resolve, 800));
       await placeOrder(selectedPayment, deliveryAddress, driverNotes);
     } catch (err: any) {
       triggerToast('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถชำระเงินได้', 'info');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGatewaySuccess = async (txnRef: string) => {
+    setIsGatewayOpen(false);
+    setIsProcessing(true);
+    try {
+      await placeOrder(selectedPayment, deliveryAddress, driverNotes);
+      triggerToast('สั่งอาหารและชำระเงินสำเร็จ! 🎉', `เลขอ้างอิง: ${txnRef} ซิงค์ลง Cloud Firestore แล้ว`, 'reward');
+    } catch (err: any) {
+      triggerToast('เกิดข้อผิดพลาดในการบันทึกออเดอร์', err.message, 'info');
     } finally {
       setIsProcessing(false);
     }
@@ -355,6 +376,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* Payment Gateway Modal (PromptPay QR & Credit Card 3DS) */}
+      {isGatewayOpen && (
+        <PaymentGatewayModal
+          orderId={`ORD-${Date.now().toString().slice(-6)}`}
+          amount={finalTotal}
+          channel={selectedPayment === 'credit_card' ? 'credit_card' : 'promptpay_qr'}
+          merchantName={cartRestaurant?.name || 'FoodExpress Partner'}
+          onSuccess={handleGatewaySuccess}
+          onCancel={() => setIsGatewayOpen(false)}
+        />
+      )}
     </div>
   );
 };

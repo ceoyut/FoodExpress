@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "Customer food orders with payment and delivery tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "restaurantName": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "itemsSummary": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "orderStatus": { "type": "string" },
+        "transactionRef": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "restaurantId", "totalAmount", "paymentStatus", "orderStatus"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Payment gateway charge transaction records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "amount": { "type": "number" },
+        "channel": { "type": "string" },
+        "status": { "type": "string" },
+        "chargeRef": { "type": "string" },
+        "promptpayPayload": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "orderId", "amount", "channel", "status"]
+    },
+    "MerchantSettlement": {
+      "title": "MerchantSettlement",
+      "description": "Daily settlement and payout reconciliation records for restaurants",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "date": { "type": "string" },
+        "grossSales": { "type": "number" },
+        "netPayoutPayable": { "type": "number" },
+        "platformGpFee": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "restaurantId", "date", "grossSales", "netPayoutPayable", "status"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of orders placed by customers"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Payment gateway transaction records and webhook logs"
+    },
+    "/settlements/{settlementId}": {
+      "schema": "MerchantSettlement",
+      "description": "Daily merchant revenue settlement records"
+    }
+  }
+}

@@ -5,6 +5,11 @@ import { RestaurantCard } from '../components/RestaurantCard';
 import { PromoBannerCarousel } from '../components/PromoBannerCarousel';
 import { LocationSortControl } from '../components/LocationSortControl';
 import { DietaryFilterBar } from '../components/DietaryFilterBar';
+import { FavoritesModal } from '../components/FavoritesModal';
+import { MessengerModal } from '../components/MessengerModal';
+import { TaxiModal } from '../components/TaxiModal';
+import { SupermarketModal } from '../components/SupermarketModal';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
 import { 
@@ -17,7 +22,10 @@ import {
   Percent, 
   ChevronRight, 
   SlidersHorizontal,
-  MapPin
+  MapPin,
+  Heart,
+  Wallet as WalletIcon,
+  Bell
 } from 'lucide-react';
 
 export const HomeScreen: React.FC = () => {
@@ -26,10 +34,18 @@ export const HomeScreen: React.FC = () => {
     userLocation,
     setSelectedRestaurant, 
     setIsNotificationsOpen,
+    unreadNotificationCount,
+    setIsAuthModalOpen,
+    setIsWalletOpen,
     setActiveTab,
     t,
     language
   } = useApp();
+
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isMessengerOpen, setIsMessengerOpen] = useState(false);
+  const [isTaxiOpen, setIsTaxiOpen] = useState(false);
+  const [isSupermarketOpen, setIsSupermarketOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
@@ -144,67 +160,226 @@ export const HomeScreen: React.FC = () => {
   const maxDistance = distances.length > 0 ? Math.max(...distances) : 0;
 
   return (
-    <div className="p-3 sm:p-5 space-y-4 sm:space-y-5">
-      
-      {/* Top Welcome & Member Tier Status Bar */}
-      <div className="flex items-center justify-between gap-3 px-0.5">
-        <div>
-          <p className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-            <span>สวัสดี,</span>
-            <span className="font-bold text-slate-800">คุณ{user.name.split(' ')[0]}</span>
-            <span>👋</span>
-          </p>
-          <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-            ดีลเด็ดและร้านอาหารแนะนำวันนี้
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold flex items-center gap-1 shadow-2xs">
-            <Sparkles className="w-3 h-3 text-amber-500 fill-amber-400" />
-            <span>{user.tier} Member</span>
-          </span>
-          <button
-            id="home-open-rewards-quick-btn"
-            onClick={() => setActiveTab('rewards')}
-            className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-xl border border-emerald-200 transition-colors cursor-pointer"
-            title="ดูคะแนนสะสมและแลกรางวัล"
-          >
-            {user.loyaltyPoints} แต้ม
-          </button>
-        </div>
-      </div>
-
-      {/* Swipeable Promotional Banner Section (Featured Restaurants & Seasonal Discounts) */}
-      <PromoBannerCarousel />
-
-      {/* Rider Partner Quick Access Banner */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-xs flex items-center justify-between gap-3 border border-slate-700/60">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-            🛵
+    <div className="space-y-4">
+      {/* Top Superapp Green Canopy (Matching Reference Image) */}
+      <div className="bg-gradient-to-b from-[#00BA76] via-[#00BA76] to-[#009E60] pt-2 sm:pt-3 px-4 pb-5 sm:pb-6 rounded-b-[28px] shadow-sm text-white">
+        {/* Top Utility Bar */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-1.5">
+            <LanguageSwitcher />
+            <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold flex items-center gap-1 backdrop-blur-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+              Firebase Cloud
+            </span>
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-black text-white">FoodExpress Rider Hub</span>
-              <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-1.5 py-0.2 rounded-full uppercase">
-                เปิดรับสมัคร
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 truncate">
-              สมัครพนักงานจัดส่ง • ระบบคิวรับงาน • ถอนเงินไว 24 ชม.
+
+          <div className="flex items-center gap-2">
+            {/* Quick Wallet Pill */}
+            <button
+              id="home-wallet-pill-btn"
+              onClick={() => setIsWalletOpen(true)}
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              title="เติมเงิน / กระเป๋าเงิน"
+            >
+              <WalletIcon className="w-3.5 h-3.5 text-white" />
+              <span>฿{user.walletBalance.toLocaleString()}</span>
+            </button>
+
+            {/* Quick Points Pill */}
+            <button
+              id="home-points-pill-btn"
+              onClick={() => setActiveTab('rewards')}
+              className="flex items-center gap-1 bg-amber-400 text-slate-950 px-2.5 py-1 rounded-xl text-[11px] font-black transition-all cursor-pointer shadow-xs"
+              title="ดูคะแนนสะสมและแลกรางวัล"
+            >
+              <Sparkles className="w-3 h-3 fill-slate-950" />
+              <span>{user.loyaltyPoints} แต้ม</span>
+            </button>
+
+            {/* Notifications */}
+            <button
+              id="home-notifications-pill-btn"
+              onClick={() => setIsNotificationsOpen(true)}
+              className="relative w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-xs flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <Bell className="w-4 h-4 text-white" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-[9px] font-black rounded-full flex items-center justify-center text-white border border-white">
+                  {unreadNotificationCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Main Greeting & Heart Button (1:1 with Reference Image) */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
+              สวัสดี Taetae!
+            </h1>
+            <p className="text-xs sm:text-sm font-medium text-white/90 mt-0.5">
+              วันนี้มีอะไรให้เราช่วยไหม?
             </p>
           </div>
+
+          {/* Heart Button on Top Right (From Reference Image) */}
+          <button
+            id="home-favorites-btn"
+            onClick={() => setIsFavoritesOpen(true)}
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-[#00BA76] shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 transition-transform cursor-pointer shrink-0"
+            title="ร้านโปรดของคุณ"
+          >
+            <Heart className="w-5 h-5 fill-[#00BA76]" />
+          </button>
         </div>
 
+        {/* Current Location Pill (1:1 with Reference Image) */}
         <button
-          id="home-open-rider-hub-btn"
-          onClick={() => setActiveTab('rider_hub')}
-          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1"
+          id="home-location-pill-btn"
+          onClick={() => setIsAuthModalOpen(true)}
+          className="w-full bg-black/15 hover:bg-black/25 active:scale-[0.99] backdrop-blur-xs rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all border border-white/15 mb-3.5 cursor-pointer"
         >
-          <span>ศูนย์ไรเดอร์</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="w-4 h-4 text-white shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-white truncate">
+              {userLocation.isLiveGPS ? `📍 ${userLocation.name || 'ตำแหน่งปัจจุบัน (GPS)'}` : (userLocation.name || 'ตำแหน่งปัจจุบัน')}
+            </span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-white/80 shrink-0" />
         </button>
+
+        {/* Hero Service Card: สั่งอาหาร (1:1 with Reference Image) */}
+        <div
+          id="hero-service-card-food"
+          onClick={() => {
+            document.getElementById('search-restaurants-input')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs text-slate-800 flex items-center justify-between gap-3 cursor-pointer hover:shadow-md transition-all active:scale-[0.99] border border-slate-100/90 mb-3"
+        >
+          <div className="space-y-1">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              สั่งอาหาร
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              ร้านดังลดสูงสุด 50% • ส่งฟรี 0 บาท
+            </p>
+            <div className="pt-1.5 flex items-center gap-1.5">
+              <span className="text-[10px] font-extrabold text-[#00BA76] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+                อาหารจานด่วน & ข้าวแกง
+              </span>
+              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                ดีลเด็ด
+              </span>
+            </div>
+          </div>
+          <div className="w-24 sm:w-28 h-20 sm:h-24 shrink-0 flex items-center justify-center">
+            <img
+              src="/src/assets/images/food_mascot_1789709435278.jpg"
+              alt="สั่งอาหาร Mascot"
+              className="w-full h-full object-contain drop-shadow-xs"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+
+        {/* 3 Sub-Service Cards: เมสเซ็นเจอร์ | เรียกแท็กซี่ | สั่งของซูเปอร์ (1:1 with Reference Image) */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {/* 1. เมสเซ็นเจอร์ */}
+          <div className="flex flex-col items-center">
+            <button
+              id="service-card-messenger"
+              onClick={() => setIsMessengerOpen(true)}
+              className="w-full aspect-square bg-white rounded-2xl sm:rounded-3xl p-2.5 shadow-xs border border-slate-100 flex items-center justify-center hover:scale-102 active:scale-95 transition-transform cursor-pointer"
+              title="ส่งของด่วน เมสเซ็นเจอร์"
+            >
+              <img
+                src="/src/assets/images/messenger_scooter_1789709446992.jpg"
+                alt="เมสเซ็นเจอร์"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </button>
+            <span className="text-xs font-bold text-white text-center mt-1.5 drop-shadow-xs">
+              เมสเซ็นเจอร์
+            </span>
+          </div>
+
+          {/* 2. เรียกแท็กซี่ */}
+          <div className="flex flex-col items-center">
+            <button
+              id="service-card-taxi"
+              onClick={() => setIsTaxiOpen(true)}
+              className="w-full aspect-square bg-white rounded-2xl sm:rounded-3xl p-2.5 shadow-xs border border-slate-100 flex items-center justify-center hover:scale-102 active:scale-95 transition-transform cursor-pointer"
+              title="เรียกรถแท็กซี่"
+            >
+              <img
+                src="/src/assets/images/taxi_ride_1789709464979.jpg"
+                alt="เรียกแท็กซี่"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </button>
+            <span className="text-xs font-bold text-white text-center mt-1.5 drop-shadow-xs">
+              เรียกแท็กซี่
+            </span>
+          </div>
+
+          {/* 3. สั่งของซูเปอร์ */}
+          <div className="flex flex-col items-center">
+            <button
+              id="service-card-supermarket"
+              onClick={() => setIsSupermarketOpen(true)}
+              className="w-full aspect-square bg-white rounded-2xl sm:rounded-3xl p-2.5 shadow-xs border border-slate-100 flex items-center justify-center hover:scale-102 active:scale-95 transition-transform cursor-pointer"
+              title="สั่งของซูเปอร์มาร์เก็ต"
+            >
+              <img
+                src="/src/assets/images/mart_basket_1789709478997.jpg"
+                alt="สั่งของซูเปอร์"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </button>
+            <span className="text-xs font-bold text-white text-center mt-1.5 drop-shadow-xs">
+              สั่งของซูเปอร์
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className="p-3 sm:p-5 space-y-4 sm:space-y-5">
+        {/* Swipeable Promotional Banner Section (Featured Restaurants & Seasonal Discounts) */}
+        <PromoBannerCarousel />
+
+        {/* Rider Partner Quick Access Banner */}
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-xs flex items-center justify-between gap-3 border border-slate-700/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+              🛵
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-white">FoodExpress Rider Hub</span>
+                <span className="text-[9px] font-extrabold bg-emerald-500 text-slate-950 px-1.5 py-0.2 rounded-full uppercase">
+                  เปิดรับสมัคร
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 truncate">
+                สมัครพนักงานจัดส่ง • ระบบคิวรับงาน • ถอนเงินไว 24 ชม.
+              </p>
+            </div>
+          </div>
+
+          <button
+            id="home-open-rider-hub-btn"
+            onClick={() => setActiveTab('rider_hub')}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer shrink-0 flex items-center gap-1"
+          >
+            <span>ศูนย์ไรเดอร์</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
       {/* Search Input Bar */}
       <div className="relative">
@@ -396,6 +571,13 @@ export const HomeScreen: React.FC = () => {
           </button>
         </div>
       )}
+      </div>
+
+      {/* Interactive Service Modals & Favorites (From User's Reference UX) */}
+      {isFavoritesOpen && <FavoritesModal onClose={() => setIsFavoritesOpen(false)} />}
+      {isMessengerOpen && <MessengerModal onClose={() => setIsMessengerOpen(false)} />}
+      {isTaxiOpen && <TaxiModal onClose={() => setIsTaxiOpen(false)} />}
+      {isSupermarketOpen && <SupermarketModal onClose={() => setIsSupermarketOpen(false)} />}
     </div>
   );
 };

@@ -274,6 +274,7 @@ export interface MerchantSettlementConfig {
   enableInstantPushNotifications: boolean; // Instant push notification for every successful transaction completed at the store
   minPendingPayoutThreshold?: number; // เกณฑ์ยอดเงินรอโอนขั้นต่ำสำหรับการแจ้งเตือน (Minimum Pending Payout Threshold Alert)
   enablePendingPayoutAlert?: boolean; // เปิด/ปิดการแจ้งเตือนเมื่อยอดเงินรอโอนข้ามเกณฑ์ขั้นต่ำ
+  dailySalesGoal?: number; // เป้าหมายยอดขายประจำวัน (Daily Sales Goal in Baht, e.g., 5000)
 }
 
 export interface MerchantOrderReconciliationItem {
@@ -313,6 +314,7 @@ export interface MerchantDailySettlement {
   cashCollectedByStore: number; // เงินสดที่ร้านค้าเก็บไปแล้ว (COD หรือหน้าร้าน)
   netPayoutPayable: number; // ยอดสุทธิที่ต้องโอนให้ร้านค้า (Net Payout)
   totalTipsReceived?: number; // ทิปรวมที่พนักงานจัดส่งได้รับ (Total Tips Received - Delivery Staff Performance Incentive)
+  dailySalesGoal?: number; // เป้าหมายยอดขายประจำวัน (Daily Sales Goal)
   status: MerchantPayoutStatus;
   config: MerchantSettlementConfig;
   bankAccount: MerchantBankAccount;
