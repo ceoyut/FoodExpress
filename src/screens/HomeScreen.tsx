@@ -13,6 +13,10 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
 import { DeliverySlaModal } from '../components/DeliverySlaModal';
+import foodMascotImg from '../assets/images/food_mascot_1789709435278.jpg';
+import messengerImg from '../assets/images/messenger_scooter_1789709446992.jpg';
+import taxiRideImg from '../assets/images/taxi_ride_1789709464979.jpg';
+import martBasketImg from '../assets/images/mart_basket_1789709478997.jpg';
 import { 
   Search, 
   Sparkles, 
@@ -279,7 +283,13 @@ export const HomeScreen: React.FC = () => {
           </div>
           <div className="w-24 sm:w-28 h-20 sm:h-24 shrink-0 flex items-center justify-center">
             <img
-              src="/src/assets/images/food_mascot_1789709435278.jpg"
+              src={foodMascotImg}
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (target.src !== '/assets/images/food_mascot_1789709435278.jpg') {
+                  target.src = '/assets/images/food_mascot_1789709435278.jpg';
+                }
+              }}
               alt="สั่งอาหาร Mascot"
               className="w-full h-full object-contain drop-shadow-xs"
               referrerPolicy="no-referrer"
@@ -298,7 +308,13 @@ export const HomeScreen: React.FC = () => {
               title="ส่งของด่วน เมสเซ็นเจอร์"
             >
               <img
-                src="/src/assets/images/messenger_scooter_1789709446992.jpg"
+                src={messengerImg}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== '/assets/images/messenger_scooter_1789709446992.jpg') {
+                    target.src = '/assets/images/messenger_scooter_1789709446992.jpg';
+                  }
+                }}
                 alt="เมสเซ็นเจอร์"
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
@@ -318,7 +334,13 @@ export const HomeScreen: React.FC = () => {
               title="เรียกรถแท็กซี่"
             >
               <img
-                src="/src/assets/images/taxi_ride_1789709464979.jpg"
+                src={taxiRideImg}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== '/assets/images/taxi_ride_1789709464979.jpg') {
+                    target.src = '/assets/images/taxi_ride_1789709464979.jpg';
+                  }
+                }}
                 alt="เรียกแท็กซี่"
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"
@@ -338,7 +360,13 @@ export const HomeScreen: React.FC = () => {
               title="สั่งของซูเปอร์มาร์เก็ต"
             >
               <img
-                src="/src/assets/images/mart_basket_1789709478997.jpg"
+                src={martBasketImg}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (target.src !== '/assets/images/mart_basket_1789709478997.jpg') {
+                    target.src = '/assets/images/mart_basket_1789709478997.jpg';
+                  }
+                }}
                 alt="สั่งของซูเปอร์"
                 className="w-full h-full object-contain"
                 referrerPolicy="no-referrer"

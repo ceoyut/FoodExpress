@@ -17,6 +17,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { Restaurant } from '../types';
+import promoBannerGreenImg from '../assets/images/promo_banner_green_1789709495074.jpg';
 
 interface PromoBannerItem {
   id: string;
@@ -47,7 +48,7 @@ const PROMO_BANNERS: PromoBannerItem[] = [
     restaurantId: 'rest_1',
     ctaText: 'ใช้โค้ดลดเลย',
     bgGradient: 'from-emerald-950/90 via-[#00BA76]/80 to-slate-900/85',
-    imageUrl: '/src/assets/images/promo_banner_green_1789709495074.jpg',
+    imageUrl: promoBannerGreenImg,
     category: 'แคมเปญสุดคุ้ม'
   },
   {
