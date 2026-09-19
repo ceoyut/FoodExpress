@@ -47,6 +47,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { MerchantDailySettlement, MerchantOrderReconciliationItem } from '../types';
 import { WeeklyRevenueSummaryView } from '../components/WeeklyRevenueSummaryView';
+import { DailyInsights } from '../components/merchant/DailyInsights';
+import { computeMerchantSettlement, generateMockReconciledOrders } from '../data/merchantSettlementData';
 import { GP_PACKAGES } from '../data/merchantAuthData';
 import { SettlementSummaryAlert } from '../components/SettlementSummaryAlert';
 import { NewOrderAlertModal } from '../components/NewOrderAlertModal';
@@ -235,18 +237,80 @@ export const MerchantSettlementScreen: React.FC = () => {
     );
   };
 
-  // Available dates for tab selection
+  // Helper to format Thai date for display
+  const formatThaiDateDisplay = (dateStr: string) => {
+    try {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      if (!year || !month || !day) return dateStr;
+      const thaiMonths = [
+        'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+      ];
+      return `${day} ${thaiMonths[month - 1]} ${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Quick preset dates
   const availableDates = [
-    { key: '2026-09-12', label: 'วันนี้', sublabel: '12 ก.ย. 2026' },
-    { key: '2026-09-11', label: 'เมื่อวานนี้', sublabel: '11 ก.ย. 2026' },
-    { key: '2026-09-10', label: '2 วันที่แล้ว', sublabel: '10 ก.ย. 2026' },
+    { key: '2026-09-12', label: 'วันนี้', sublabel: '12 ก.ย.' },
+    { key: '2026-09-11', label: 'เมื่อวานนี้', sublabel: '11 ก.ย.' },
+    { key: '2026-09-10', label: '2 วันก่อน', sublabel: '10 ก.ย.' },
+    { key: '2026-09-05', label: '7 วันก่อน', sublabel: '5 ก.ย.' },
   ];
 
-  // Find current settlement record
+  // Handler for selecting date (including historical date input)
+  const handleSelectDate = (dateStr: string) => {
+    if (!dateStr) return;
+    setSelectedSettlementDate(dateStr);
+    
+    // Check if settlement exists in state for this restaurant & date; if not, trigger EOD calculation
+    const existing = merchantSettlements.find(
+      s => s.restaurantId === selectedSettlementRestId && s.date === dateStr
+    );
+    if (!existing) {
+      runEodSettlementCalculation(selectedSettlementRestId, dateStr);
+    }
+  };
+
+  // Step day backwards or forwards
+  const handleStepDay = (direction: 'prev' | 'next') => {
+    try {
+      const base = new Date(selectedSettlementDate);
+      if (isNaN(base.getTime())) return;
+      base.setDate(base.getDate() + (direction === 'next' ? 1 : -1));
+      const yyyy = base.getFullYear();
+      const mm = String(base.getMonth() + 1).padStart(2, '0');
+      const dd = String(base.getDate()).padStart(2, '0');
+      const newDateStr = `${yyyy}-${mm}-${dd}`;
+      handleSelectDate(newDateStr);
+    } catch {
+      // fallback
+    }
+  };
+
+  // Find current settlement record (with deterministic on-demand historical calculation)
   const currentSettlement = useMemo(() => {
-    return merchantSettlements.find(
+    const existing = merchantSettlements.find(
       s => s.restaurantId === selectedSettlementRestId && s.date === selectedSettlementDate
-    ) || merchantSettlements[0];
+    );
+    if (existing) return existing;
+
+    // Deterministically generate settlement for any chosen historical date
+    const orders = generateMockReconciledOrders(selectedSettlementRestId, selectedSettlementDate);
+    const dateDisplay = selectedSettlementDate === '2026-09-12' 
+      ? 'วันนี้ (12 ก.ย. 2026)' 
+      : selectedSettlementDate === '2026-09-11'
+      ? 'เมื่อวานนี้ (11 ก.ย. 2026)'
+      : `รอบย้อนหลัง (${formatThaiDateDisplay(selectedSettlementDate)})`;
+
+    return computeMerchantSettlement(
+      selectedSettlementRestId,
+      selectedSettlementDate,
+      dateDisplay,
+      orders
+    );
   }, [merchantSettlements, selectedSettlementRestId, selectedSettlementDate]);
 
   // Selected restaurant info
@@ -1003,12 +1067,12 @@ export const MerchantSettlementScreen: React.FC = () => {
       </div>
 
       {/* Summary View: Weekly Revenue Trends Bar Chart */}
-      <WeeklyRevenueSummaryView onSelectDate={(date) => setSelectedSettlementDate(date)} />
+      <WeeklyRevenueSummaryView onSelectDate={(date) => handleSelectDate(date)} />
 
-      {/* Select Restaurant Partner & Date Picker Row */}
+      {/* Select Restaurant Partner & Historical Date Picker Row */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         {/* Restaurant selector dropdown */}
-        <div className="md:col-span-7 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
+        <div className="md:col-span-6 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
           <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
             <Store className="w-3.5 h-3.5 text-emerald-600" />
             <span>เลือกร้านค้าพันธมิตร (Merchant Partner):</span>
@@ -1040,28 +1104,79 @@ export const MerchantSettlementScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Date Tabs */}
-        <div className="md:col-span-5 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-          <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-            <span>เลือกรอบวันที่ปิดยอด (Settlement Date):</span>
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
+        {/* Historical Date Selection Input & Presets */}
+        <div className="md:col-span-6 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label 
+              htmlFor="merchant-settlement-date-input" 
+              className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5"
+            >
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <span>เลือกรอบวันที่ปิดยอด (Settlement Date):</span>
+            </label>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
+              selectedSettlementDate === '2026-09-12'
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : 'bg-amber-100 text-amber-800 border border-amber-200'
+            }`}>
+              {selectedSettlementDate === '2026-09-12' ? '● รอบวันนี้' : `● ข้อมูลย้อนหลัง (${formatThaiDateDisplay(selectedSettlementDate)})`}
+            </span>
+          </div>
+
+          {/* Date Input with Step Back/Forward Navigation */}
+          <div className="flex items-center gap-1.5">
+            <button
+              id="prev-settlement-day-btn"
+              type="button"
+              onClick={() => handleStepDay('prev')}
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors cursor-pointer border border-slate-200 shrink-0 font-bold text-sm"
+              title="ย้อนกลับ 1 วัน (Previous Day)"
+            >
+              ‹
+            </button>
+
+            <div className="relative flex-1">
+              <input
+                id="merchant-settlement-date-input"
+                type="date"
+                max="2026-09-12"
+                value={selectedSettlementDate}
+                onChange={(e) => handleSelectDate(e.target.value)}
+                className="w-full h-9 px-3 text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all cursor-pointer shadow-2xs"
+                title="คลิกเพื่อเลือกวันย้อนหลังในปฏิทิน"
+              />
+            </div>
+
+            <button
+              id="next-settlement-day-btn"
+              type="button"
+              onClick={() => handleStepDay('next')}
+              disabled={selectedSettlementDate >= '2026-09-12'}
+              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 flex items-center justify-center transition-colors cursor-pointer border border-slate-200 shrink-0 font-bold text-sm"
+              title="ถัดไป 1 วัน (Next Day)"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Quick Preset Buttons */}
+          <div className="grid grid-cols-4 gap-1.5 pt-0.5">
             {availableDates.map(d => {
               const isSelected = d.key === selectedSettlementDate;
               return (
                 <button
                   key={d.key}
                   id={`select-date-${d.key}`}
-                  onClick={() => setSelectedSettlementDate(d.key)}
-                  className={`px-2.5 py-1.5 rounded-xl text-center transition-all cursor-pointer ${
+                  type="button"
+                  onClick={() => handleSelectDate(d.key)}
+                  className={`px-2 py-1 rounded-lg text-center transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-slate-900 text-white shadow-xs font-bold'
                       : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
                   }`}
                 >
-                  <div className="text-xs leading-none font-bold">{d.label}</div>
-                  <div className={`text-[9px] mt-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                  <div className="text-[11px] leading-tight font-bold">{d.label}</div>
+                  <div className={`text-[9px] ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
                     {d.sublabel}
                   </div>
                 </button>
@@ -1089,6 +1204,16 @@ export const MerchantSettlementScreen: React.FC = () => {
           }
         }}
       />
+
+      {/* Daily Insights Component: Visualizing Total Daily Revenue vs Commission Fees Deducted */}
+      {currentSettlement && (
+        <DailyInsights
+          settlement={currentSettlement}
+          allSettlements={merchantSettlements}
+          selectedDate={selectedSettlementDate}
+          onSelectDate={handleSelectDate}
+        />
+      )}
 
       {/* Summary Alert: Daily Sales Goals Met & Pending Payout Status */}
       {currentSettlement && (

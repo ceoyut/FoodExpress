@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   X, 
@@ -49,8 +49,27 @@ export const MerchantSocialAuthModal: React.FC<MerchantSocialAuthModalProps> = (
     loginMerchantAs, 
     signupMerchant, 
     logoutMerchant, 
+    setIsMerchantAuthModalOpen,
     triggerToast 
   } = useApp();
+
+  const handleClose = () => {
+    setIsMerchantAuthModalOpen(false);
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [signupStep, setSignupStep] = useState<number>(1); // 1: Social provider, 2: Store info, 3: Choose GP, 4: Bank
@@ -78,7 +97,7 @@ export const MerchantSocialAuthModal: React.FC<MerchantSocialAuthModalProps> = (
       `ยินดีต้อนรับสู่ระบบ GP ร้านค้าพาร์ทเนอร์ ผ่าน ${provider.toUpperCase()}`,
       'success'
     );
-    onClose();
+    handleClose();
   };
 
   // Complete Signup Submission
@@ -141,26 +160,28 @@ export const MerchantSocialAuthModal: React.FC<MerchantSocialAuthModalProps> = (
       `ยินดีต้อนรับร้าน "${storeName}" เข้าสู่สัญญา GP ${chosenPackage.ratePct}% พร้อมรับออเดอร์ทันที`,
       'reward'
     );
-    onClose();
+    handleClose();
   };
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+      onClick={handleClose}
     >
       <div 
-        className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 cursor-default"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white p-5 relative shrink-0">
           <button 
             id="close-merchant-auth-modal-btn"
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer"
+            title="ปิดหน้าต่าง"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>

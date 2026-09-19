@@ -474,7 +474,7 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">ค่าอาหารรวม (Subtotal)</span>
                   <span className="font-semibold text-slate-800">
-                    ฿{(order.subtotal || order.items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0)).toLocaleString()}
+                    ฿{(order.subtotal || (order.items || []).reduce((sum, i) => sum + ((i.unitPrice || 0) * (i.quantity || 1)), 0)).toLocaleString()}
                   </span>
                 </div>
 
@@ -484,22 +484,22 @@ export const OrderItem: React.FC<OrderItemProps> = ({
                     {order.deliveryFee === 0 ? (
                       <span className="text-emerald-600 font-bold">ฟรี</span>
                     ) : (
-                      `฿${order.deliveryFee.toLocaleString()}`
+                      `฿${(order.deliveryFee || 0).toLocaleString()}`
                     )}
                   </span>
                 </div>
 
-                {order.discountAmount > 0 && (
+                {(order.discountAmount || 0) > 0 && (
                   <div className="flex justify-between items-center text-rose-600">
                     <span>ส่วนลดคูปอง</span>
-                    <span className="font-bold">-฿{order.discountAmount.toLocaleString()}</span>
+                    <span className="font-bold">-฿{(order.discountAmount || 0).toLocaleString()}</span>
                   </div>
                 )}
 
-                {order.pointsUsed > 0 && (
+                {(order.pointsUsed || 0) > 0 && (
                   <div className="flex justify-between items-center text-amber-600">
                     <span>ส่วนลดจากแต้มสะสม</span>
-                    <span className="font-bold">-฿{order.pointsUsed.toLocaleString()}</span>
+                    <span className="font-bold">-฿{(order.pointsUsed || 0).toLocaleString()}</span>
                   </div>
                 )}
 
@@ -541,8 +541,8 @@ export const OrderItem: React.FC<OrderItemProps> = ({
       <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-baseline gap-2">
           <span className="text-slate-500 text-[11px]">ยอดรวมสุทธิ:</span>
-          <span className="font-black text-base text-emerald-700">฿{order.total.toLocaleString()}</span>
-          {order.pointsEarned > 0 && (
+          <span className="font-black text-base text-emerald-700">฿{(order.total || 0).toLocaleString()}</span>
+          {(order.pointsEarned || 0) > 0 && (
             <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded">
               +{order.pointsEarned} แต้ม
             </span>

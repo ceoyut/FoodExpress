@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   X, 
@@ -14,7 +14,7 @@ import {
 import { RESTAURANTS_DATA } from '../data/mockData';
 
 interface AuthModalProps {
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
@@ -23,12 +23,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     loginAs, 
     resetAllData, 
     setSelectedRestaurant, 
+    activeTab,
     setActiveTab, 
+    setIsAuthModalOpen,
     triggerToast 
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'addresses' | 'favorites'>('profile');
   const [newAddressInput, setNewAddressInput] = useState('');
+
+  const handleClose = () => {
+    setIsAuthModalOpen(false);
+    if (activeTab === 'profile') {
+      setActiveTab('home');
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab]);
 
   const favoriteRestaurants = RESTAURANTS_DATA.filter(r => 
     user.favoriteRestaurantIds.includes(r.id)
@@ -42,8 +64,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-5 text-slate-800">
+    <div 
+      className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 cursor-pointer animate-in fade-in duration-200"
+      onClick={handleClose}
+    >
+      <div 
+        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-5 text-slate-800 cursor-default"
+        onClick={e => e.stopPropagation()}
+      >
         
         {/* Header */}
         <div className="p-4 border-b border-slate-150 flex items-center justify-between bg-slate-50">
@@ -67,8 +95,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
           <button
             id="close-auth-modal-btn"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-200/80 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors"
+            onClick={handleClose}
+            className="w-8 h-8 rounded-full bg-slate-200/80 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
+            title="ปิดหน้าต่าง"
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
@@ -216,7 +246,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                       key={rest.id}
                       onClick={() => {
                         setSelectedRestaurant(rest);
-                        onClose();
+                        handleClose();
                       }}
                       className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:border-emerald-400 flex items-center justify-between gap-3 cursor-pointer transition-colors"
                     >

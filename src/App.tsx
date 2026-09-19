@@ -22,6 +22,7 @@ import { MerchantGpCalculatorModal } from './components/merchant/MerchantGpCalcu
 const AppContent: React.FC = () => {
   const { 
     activeTab, 
+    setActiveTab,
     selectedRestaurant, 
     setSelectedRestaurant, 
     isCartOpen, 
@@ -56,11 +57,7 @@ const AppContent: React.FC = () => {
           {activeTab === 'rewards' && <RewardsModal />}
           {activeTab === 'pos_settlement' && <MerchantSettlementScreen />}
           {activeTab === 'rider_hub' && <RiderHubScreen />}
-          {activeTab === 'profile' && (
-            <div className="p-4 sm:p-6">
-              <AuthModal onClose={() => {}} />
-            </div>
-          )}
+          {activeTab === 'profile' && <HomeScreen />}
         </main>
 
         {/* Bottom Floating Navigation */}
@@ -102,8 +99,15 @@ const AppContent: React.FC = () => {
           <WalletTopUpModal onClose={() => setIsTopUpOpen(false)} />
         )}
 
-        {isAuthModalOpen && (
-          <AuthModal onClose={() => setIsAuthModalOpen(false)} />
+        {(isAuthModalOpen || activeTab === 'profile') && (
+          <AuthModal 
+            onClose={() => {
+              setIsAuthModalOpen(false);
+              if (activeTab === 'profile') {
+                setActiveTab('home');
+              }
+            }} 
+          />
         )}
 
         {/* Merchant GP Social Auth & Registration Modal */}
