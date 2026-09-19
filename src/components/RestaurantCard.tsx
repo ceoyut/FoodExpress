@@ -1,9 +1,11 @@
 import React from 'react';
 import { Restaurant, DietaryPreference } from '../types';
 import { useApp } from '../context/AppContext';
-import { Star, Clock, Bike, Heart, MapPin } from 'lucide-react';
+import { Star, Clock, Bike, Heart, MapPin, Zap } from 'lucide-react';
 import { formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
 import { getDietaryConfig } from '../data/dietaryPreferences';
+import { getDeliverySlaDetails } from '../utils/deliverySla';
+import { DeliverySlaBadge } from './DeliverySlaBadge';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -25,12 +27,11 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   const { user, toggleFavorite } = useApp();
   const isFavorite = user.favoriteRestaurantIds.includes(restaurant.id);
 
-  // Compute display distance and dynamic delivery time
+  // Compute display distance and dynamic delivery time & SLA details
   const effectiveDistance = calculatedDistanceKm !== undefined ? calculatedDistanceKm : restaurant.distanceKm;
   const displayDistance = formatDistance(effectiveDistance);
-  const displayDeliveryTime = calculatedDistanceKm !== undefined
-    ? estimateDeliveryMinutes(restaurant.averagePrepTimeMinutes || 15, effectiveDistance)
-    : restaurant.deliveryTimeMinutes;
+  const slaDetails = getDeliverySlaDetails(effectiveDistance, restaurant.averagePrepTimeMinutes || 15);
+  const displayDeliveryTime = slaDetails.totalMinutes;
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,16 +75,31 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           </div>
         )}
 
-        {/* Promo Badge (shifted if proximity rank is displayed) */}
-        {restaurant.promoBadge && (
-          <div className={`absolute text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${
-            isDistanceSorted && proximityRank !== undefined 
-              ? 'top-8 left-2.5 bg-rose-500/95' 
-              : 'top-2.5 left-2.5 bg-rose-500'
-          }`}>
-            {restaurant.promoBadge}
-          </div>
-        )}
+        {/* Delivery SLA Badge on Image (or Promo) */}
+        <div className={`absolute flex flex-col gap-1 items-start ${
+          isDistanceSorted && proximityRank !== undefined ? 'top-8 left-2.5' : 'top-2.5 left-2.5'
+        }`}>
+          {slaDetails.isSweetSpot ? (
+            <span className="text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md bg-emerald-600/95 backdrop-blur-xs flex items-center gap-1 border border-emerald-400/40">
+              <Zap className="w-3 h-3 fill-amber-300 text-amber-300" />
+              <span>ส่งด่วน 20-30 น. (Sweet Spot)</span>
+            </span>
+          ) : slaDetails.isExtended ? (
+            <span className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md bg-orange-600/95 backdrop-blur-xs flex items-center gap-1 border border-orange-400/40">
+              <span>🛡️ &gt;45 น. (กระเป๋าคุมอุณหภูมิ)</span>
+            </span>
+          ) : (
+            <span className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md bg-slate-900/80 backdrop-blur-xs flex items-center gap-1 border border-white/20">
+              <span>⏱️ 30-45 น. (ระยะมาตรฐาน)</span>
+            </span>
+          )}
+
+          {restaurant.promoBadge && (
+            <div className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm bg-rose-500">
+              {restaurant.promoBadge}
+            </div>
+          )}
+        </div>
 
         {/* Favorite Button */}
         <button
@@ -97,7 +113,11 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
 
         {/* Delivery Time & Distance Chip */}
         <div className={`absolute bottom-2 left-2 flex items-center gap-1.5 text-white text-[11px] font-medium backdrop-blur-xs px-2 py-0.5 rounded-md ${
-          isDistanceSorted ? 'bg-emerald-950/80 border border-emerald-500/30' : 'bg-black/60'
+          slaDetails.isSweetSpot 
+            ? 'bg-emerald-950/85 border border-emerald-500/40' 
+            : slaDetails.isExtended
+            ? 'bg-orange-950/85 border border-orange-500/40'
+            : 'bg-black/60'
         }`}>
           <Clock className="w-3 h-3 text-emerald-400" />
           <span>{displayDeliveryTime} นาที</span>

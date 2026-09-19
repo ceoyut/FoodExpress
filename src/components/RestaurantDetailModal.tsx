@@ -14,10 +14,15 @@ import {
   MessageSquare, 
   Info, 
   CheckCircle2, 
-  Sparkles 
+  Sparkles,
+  Zap,
+  ShieldCheck,
+  ThermometerSnowflake
 } from 'lucide-react';
 import { getRestaurantDistance, formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
 import { getDietaryConfig } from '../data/dietaryPreferences';
+import { getDeliverySlaDetails } from '../utils/deliverySla';
+import { DeliverySlaModal } from './DeliverySlaModal';
 
 interface RestaurantDetailModalProps {
   restaurant: Restaurant;
@@ -28,10 +33,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
   const { user, userLocation, toggleFavorite, addToCart, reviews, setIsReviewModalOpen, setReviewingOrder } = useApp();
   const [activeTab, setActiveTab] = useState<'menu' | 'reviews' | 'info'>('menu');
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
+  const [isSlaModalOpen, setIsSlaModalOpen] = useState(false);
 
   const effectiveDistance = getRestaurantDistance(restaurant, userLocation);
   const displayDistance = formatDistance(effectiveDistance);
-  const displayDeliveryTime = estimateDeliveryMinutes(restaurant.averagePrepTimeMinutes || 15, effectiveDistance);
+  const sla = getDeliverySlaDetails(effectiveDistance, restaurant.averagePrepTimeMinutes || 15);
+  const displayDeliveryTime = sla.totalMinutes;
 
   // Customization state for selected menu item
   const [quantity, setQuantity] = useState(1);
@@ -172,6 +179,71 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
             ) : (
               <span className="text-slate-700">ค่าส่ง ฿{restaurant.deliveryFee}</span>
             )}
+          </div>
+        </div>
+
+        {/* Delivery Distance & Freshness SLA Engine Card */}
+        <div className={`mx-4 sm:mx-5 my-3 p-3.5 rounded-2xl border ${sla.badgeBorder} ${sla.badgeBg} space-y-2`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wide flex items-center gap-1 bg-white border ${sla.badgeBorder} ${sla.badgeTextCol}`}>
+                {sla.isSweetSpot && <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />}
+                {!sla.isSweetSpot && !sla.isExtended && <Clock className="w-3.5 h-3.5 text-amber-600" />}
+                {sla.isExtended && <ThermometerSnowflake className="w-3.5 h-3.5 text-orange-600" />}
+                <span>{sla.tierTitleTh}</span>
+              </span>
+              <span className="font-extrabold text-slate-800 text-xs">
+                {displayDistance} • {sla.totalMinutes} นาที
+              </span>
+            </div>
+
+            <button
+              id="restaurant-open-sla-modal-btn"
+              onClick={() => setIsSlaModalOpen(true)}
+              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <Info className="w-3.5 h-3.5" />
+              <span>เกณฑ์จัดส่ง</span>
+            </button>
+          </div>
+
+          {/* Time & Prep breakdown timeline bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1 border-t border-black/5">
+            <div className="flex items-center gap-2 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
+                🍳
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-400 font-medium">เวลาเตรียมอาหาร</div>
+                <div className="font-bold text-slate-800">~{sla.prepMinutes} นาที</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                🛵
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-400 font-medium">ไรเดอร์เดินทาง</div>
+                <div className="font-bold text-slate-800">~{sla.travelMinutes} นาที ({displayDistance})</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-white/70 p-2 rounded-xl border border-slate-100">
+              <div className="w-6 h-6 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs shrink-0">
+                ✨
+              </div>
+              <div>
+                <div className="text-[10px] text-slate-400 font-medium">การันตีคุณภาพ</div>
+                <div className="font-bold text-slate-800 truncate">{sla.freshnessLabelTh}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Smart Pre-dispatch notification */}
+          <div className="flex items-center gap-1.5 text-[10.5px] text-slate-600 bg-white/90 px-2.5 py-1.5 rounded-xl border border-slate-200/60">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>{sla.riderDispatchRecommendationTh}</span>
           </div>
         </div>
 
@@ -603,6 +675,12 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
           </div>
         </div>
       )}
+
+      {/* Delivery SLA Modal */}
+      <DeliverySlaModal
+        isOpen={isSlaModalOpen}
+        onClose={() => setIsSlaModalOpen(false)}
+      />
     </div>
   );
 };

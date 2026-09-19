@@ -26,9 +26,12 @@ import {
   Store,
   Utensils,
   Bike,
-  PackageCheck
+  PackageCheck,
+  ThermometerSnowflake,
+  Sparkles
 } from 'lucide-react';
 import { OrderStatus } from '../types';
+import { getDeliverySlaDetails } from '../utils/deliverySla';
 
 interface LiveTrackingModalProps {
   onClose: () => void;
@@ -81,6 +84,9 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({ onClose })
 
   const isDelivered = activeOrder.status === 'delivered';
   const pct = Math.min(100, Math.max(0, activeOrder.riderProgressPct));
+
+  const effectiveDistance = activeOrder.distanceKm || 2.8;
+  const sla = getDeliverySlaDetails(effectiveDistance, 15);
 
   // Audio feedback helper (Web Audio API synthetics)
   const playBeep = (freq: number = 880, duration: number = 0.15) => {
@@ -748,6 +754,46 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({ onClose })
               </div>
             </div>
           )}
+
+          {/* Delivery SLA Benchmark & Food Quality Guarantee Card */}
+          <div className={`p-3.5 rounded-2xl border ${sla.badgeBorder} ${sla.badgeBg} space-y-2`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white border ${sla.badgeBorder} ${sla.badgeTextCol} flex items-center gap-1`}>
+                  {sla.isSweetSpot && <Zap className="w-3 h-3 fill-emerald-600 text-emerald-600" />}
+                  {!sla.isSweetSpot && !sla.isExtended && <Clock className="w-3 h-3 text-amber-600" />}
+                  {sla.isExtended && <ThermometerSnowflake className="w-3 h-3 text-orange-600" />}
+                  <span>{sla.tierTitleTh}</span>
+                </span>
+                <span className="font-extrabold text-slate-800 text-xs">
+                  เป้าหมายรวม ~{sla.totalMinutes} นาที ({effectiveDistance} กม.)
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 bg-white/70 px-2 py-0.5 rounded-md border border-slate-200/50">
+                SLA อาหารสดใหม่
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 text-[10.5px] pt-1 border-t border-black/5">
+              <div className="bg-white/85 p-2 rounded-xl text-center border border-slate-100">
+                <div className="text-[9.5px] text-slate-400">เวลาปรุงอาหาร</div>
+                <div className="font-bold text-slate-800">~{sla.prepMinutes} นาที</div>
+              </div>
+              <div className="bg-white/85 p-2 rounded-xl text-center border border-slate-100">
+                <div className="text-[9.5px] text-slate-400">เวลาวิ่งส่ง (GPS)</div>
+                <div className="font-bold text-slate-800">~{sla.travelMinutes} นาที</div>
+              </div>
+              <div className="bg-white/85 p-2 rounded-xl text-center border border-slate-100">
+                <div className="text-[9.5px] text-slate-400">การันตีคุณภาพ</div>
+                <div className="font-bold text-emerald-700 truncate">{sla.freshnessLabelTh}</div>
+              </div>
+            </div>
+
+            <div className="text-[10.5px] text-slate-600 bg-white/90 p-2 rounded-xl border border-slate-200/60 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>{sla.riderDispatchRecommendationTh}</span>
+            </div>
+          </div>
 
           {/* Delivery Details Summary */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">

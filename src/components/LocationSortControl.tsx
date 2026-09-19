@@ -17,8 +17,12 @@ import {
   AlertCircle,
   LocateFixed,
   Sparkles,
-  Info
+  Info,
+  Zap,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
+import { DeliverySlaModal } from './DeliverySlaModal';
 
 interface LocationSortControlProps {
   currentSort: RestaurantSortOption;
@@ -49,6 +53,7 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
 
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showRadiusFilter, setShowRadiusFilter] = useState(false);
+  const [isSlaModalOpen, setIsSlaModalOpen] = useState(false);
 
   const handleSelectBenchmark = (bench: BenchmarkLocation) => {
     const updated: UserGeoLocation = {
@@ -73,12 +78,11 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
     setShowLocationPicker(false);
   };
 
-  const distancePresets: { label: string; value: number | null }[] = [
+  const distancePresets: { label: string; value: number | null; badge?: string }[] = [
     { label: 'ทุกระยะ', value: null },
-    { label: '< 1.5 กม.', value: 1.5 },
-    { label: '< 2.5 กม.', value: 2.5 },
-    { label: '< 3.5 กม.', value: 3.5 },
-    { label: '< 5.0 กม.', value: 5.0 },
+    { label: '⚡ < 3.0 กม.', value: 3.0, badge: 'ใกล้สุด' },
+    { label: '🟢 < 5.0 กม.', value: 5.0, badge: 'Sweet Spot (20-30 น.)' },
+    { label: '🟡 < 8.0 กม.', value: 8.0, badge: 'มาตรฐาน (30-45 น.)' },
   ];
 
   return (
@@ -294,8 +298,18 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
           </button>
         </div>
 
-        {/* Filter by distance toggle */}
-        <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+        {/* Filter by distance toggle & SLA Benchmark Modal Button */}
+        <div className="flex items-center gap-2 self-end md:self-auto shrink-0 flex-wrap">
+          <button
+            id="open-delivery-sla-info-btn"
+            onClick={() => setIsSlaModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
+            title="คลิกเพื่อดูเกณฑ์ระยะทางและเวลาที่เหมาะสม FoodExpress"
+          >
+            <Zap className="w-3.5 h-3.5 fill-emerald-600 text-emerald-600" />
+            <span>เกณฑ์ส่งด่วน (20-30 น.)</span>
+          </button>
+
           <button
             id="toggle-radius-filter-btn"
             onClick={() => setShowRadiusFilter(!showRadiusFilter)}
@@ -313,19 +327,26 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
 
       {/* Radius distance filter chips (collapsible) */}
       {showRadiusFilter && (
-        <div className="mt-3 pt-2 border-t border-slate-150 flex items-center gap-1.5 overflow-x-auto">
-          <span className="text-xs text-slate-500 font-medium shrink-0 mr-1">จำกัดระยะ:</span>
+        <div className="mt-3 pt-2.5 border-t border-slate-150 flex items-center gap-1.5 overflow-x-auto pb-1">
+          <span className="text-xs text-slate-500 font-medium shrink-0 mr-1">จำกัดระยะทาง:</span>
           {distancePresets.map(preset => (
             <button
               key={preset.label}
               onClick={() => onDistanceFilterChange(preset.value)}
-              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors shrink-0 ${
+              className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors shrink-0 flex items-center gap-1 ${
                 maxDistanceFilter === preset.value
-                  ? 'bg-emerald-600 text-white font-bold'
+                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              {preset.label}
+              <span>{preset.label}</span>
+              {preset.badge && (
+                <span className={`text-[9px] px-1.5 py-0.2 rounded-md ${
+                  maxDistanceFilter === preset.value ? 'bg-emerald-700 text-white' : 'bg-white text-slate-500'
+                }`}>
+                  {preset.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -337,7 +358,7 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
           {currentSort === 'proximity' ? (
             <span className="text-emerald-700 font-bold flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              เรียงลำดับตามระยะทางจากจุดที่คุณอยู่ (ใกล้สุด {formatDistance(minDistance)} ถึง {formatDistance(maxDistance)})
+              เรียงตามระยะทางจากจุดที่คุณอยู่ (ใกล้สุด {formatDistance(minDistance)} ถึง {formatDistance(maxDistance)})
             </span>
           ) : (
             <span>
@@ -355,6 +376,12 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
           </button>
         )}
       </div>
+
+      {/* Delivery SLA Modal */}
+      <DeliverySlaModal
+        isOpen={isSlaModalOpen}
+        onClose={() => setIsSlaModalOpen(false)}
+      />
     </div>
   );
 };

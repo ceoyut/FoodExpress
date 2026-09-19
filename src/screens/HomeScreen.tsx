@@ -12,6 +12,7 @@ import { SupermarketModal } from '../components/SupermarketModal';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
+import { DeliverySlaModal } from '../components/DeliverySlaModal';
 import { 
   Search, 
   Sparkles, 
@@ -25,7 +26,8 @@ import {
   MapPin,
   Heart,
   Wallet as WalletIcon,
-  Bell
+  Bell,
+  Zap
 } from 'lucide-react';
 
 export const HomeScreen: React.FC = () => {
@@ -46,10 +48,11 @@ export const HomeScreen: React.FC = () => {
   const [isMessengerOpen, setIsMessengerOpen] = useState(false);
   const [isTaxiOpen, setIsTaxiOpen] = useState(false);
   const [isSupermarketOpen, setIsSupermarketOpen] = useState(false);
+  const [isSlaModalOpen, setIsSlaModalOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'free_delivery' | 'high_rating' | 'fast' | 'promo'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'free_delivery' | 'high_rating' | 'fast' | 'promo' | 'sweet_spot'>('all');
   const [selectedDietary, setSelectedDietary] = useState<DietaryPreference | 'all'>('all');
   
   // Location-based Sorting & Radius Filter States
@@ -119,6 +122,7 @@ export const HomeScreen: React.FC = () => {
       }
 
       // Quick filter chips
+      if (activeFilter === 'sweet_spot' && rest.calculatedDistance > 5.0) return false;
       if (activeFilter === 'free_delivery' && rest.deliveryFee > 0) return false;
       if (activeFilter === 'high_rating' && rest.rating < 4.8) return false;
       if (activeFilter === 'fast' && rest.deliveryTimeMinutes > 20) return false;
@@ -436,7 +440,7 @@ export const HomeScreen: React.FC = () => {
       />
 
       {/* Filter Chips Bar */}
-      <div className="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar text-xs items-center">
         <button
           id="filter-all-btn"
           onClick={() => setActiveFilter('all')}
@@ -447,6 +451,20 @@ export const HomeScreen: React.FC = () => {
           }`}
         >
           {t('all')}
+        </button>
+
+        {/* Optimal Sweet Spot SLA Quick Filter */}
+        <button
+          id="filter-sweet-spot-btn"
+          onClick={() => setActiveFilter(activeFilter === 'sweet_spot' ? 'all' : 'sweet_spot')}
+          className={`px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+            activeFilter === 'sweet_spot'
+              ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-300'
+              : 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+          <span>⚡ ส่งด่วน 20-30 น. (Sweet Spot &le; 5 กม.)</span>
         </button>
 
         <button
@@ -578,6 +596,7 @@ export const HomeScreen: React.FC = () => {
       {isMessengerOpen && <MessengerModal onClose={() => setIsMessengerOpen(false)} />}
       {isTaxiOpen && <TaxiModal onClose={() => setIsTaxiOpen(false)} />}
       {isSupermarketOpen && <SupermarketModal onClose={() => setIsSupermarketOpen(false)} />}
+      {isSlaModalOpen && <DeliverySlaModal isOpen={isSlaModalOpen} onClose={() => setIsSlaModalOpen(false)} />}
     </div>
   );
 };

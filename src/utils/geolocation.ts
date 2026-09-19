@@ -78,7 +78,25 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     district: 'ปทุมวัน',
     lat: 13.7460,
     lng: 100.5348,
-    description: 'ห่างจากโซนสุขุมวิทประมาณ 3.5 - 5.0 กม.',
+    description: 'ห่างจากโซนสุขุมวิทประมาณ 3.5 - 5.0 กม. (Sweet Spot แนะนำ)',
+  },
+  {
+    id: 'silom_satun',
+    name: 'สีลม / สาทร (BTS ศาลาแดง)',
+    nameEn: 'Silom / Sathorn',
+    district: 'บางรัก',
+    lat: 13.7285,
+    lng: 100.5350,
+    description: 'ห่างจากโซนสุขุมวิทประมาณ 5.2 - 7.2 กม. (ระยะมาตรฐาน 30-45 นาที)',
+  },
+  {
+    id: 'chatuchak_ladprao',
+    name: 'เซ็นทรัลลาดพร้าว / จตุจักร',
+    nameEn: 'Ladprao / Chatuchak',
+    district: 'จตุจักร',
+    lat: 13.8165,
+    lng: 100.5610,
+    description: 'ห่างจากโซนสุขุมวิทประมาณ 8.5 - 10.5 กม. (ระยะไกล >45 นาที กระเป๋าคุมอุณหภูมิ)',
   },
 ];
 

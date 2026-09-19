@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { EmptyCartIllustration } from './EmptyCartIllustration';
+import { getRestaurantDistance, formatDistance } from '../utils/geolocation';
+import { getDeliverySlaDetails } from '../utils/deliverySla';
+import { Zap, ShieldCheck, ThermometerSnowflake } from 'lucide-react';
 
 interface CartDrawerProps {
   onClose: () => void;
@@ -27,6 +30,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
   const { 
     cart, 
     cartRestaurant, 
+    userLocation,
     updateCartQuantity, 
     removeFromCart, 
     clearCart, 
@@ -39,6 +43,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
     setSelectedRestaurant,
     setActiveTab 
   } = useApp();
+
+  const effectiveDistance = cartRestaurant ? getRestaurantDistance(cartRestaurant, userLocation) : 0;
+  const sla = getDeliverySlaDetails(effectiveDistance, cartRestaurant?.averagePrepTimeMinutes || 15);
 
   // Filter coupons that user has redeemed
   const usableCoupons = coupons.filter(c => c.isRedeemed);
@@ -379,12 +386,37 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
           </div>
 
           <div className="flex justify-between text-slate-600">
-            <span>ค่าจัดส่ง (ระยะทาง {cartRestaurant.distanceKm} กม.)</span>
+            <span className="flex items-center gap-1">
+              <span>ค่าจัดส่ง</span>
+              <span className="text-slate-400">({formatDistance(effectiveDistance)} • ~{sla.totalMinutes} นาที)</span>
+            </span>
             {cartDeliveryFee === 0 ? (
               <span className="text-emerald-600 font-bold">ฟรีค่าจัดส่ง</span>
             ) : (
               <span>฿{cartDeliveryFee}</span>
             )}
+          </div>
+
+          {/* SLA Delivery Guarantee Badge in Cart */}
+          <div className={`p-2.5 rounded-xl border ${sla.badgeBorder} ${sla.badgeBg} text-[11px] space-y-1`}>
+            <div className="flex items-center justify-between">
+              <span className={`font-black flex items-center gap-1 ${sla.badgeTextCol}`}>
+                {sla.isSweetSpot && <Zap className="w-3.5 h-3.5 fill-emerald-600" />}
+                {!sla.isSweetSpot && !sla.isExtended && <Clock className="w-3.5 h-3.5" />}
+                {sla.isExtended && <ThermometerSnowflake className="w-3.5 h-3.5" />}
+                <span>{sla.tierTitleTh} (~{sla.totalMinutes} นาที)</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-semibold">
+                ปรุง ~{sla.prepMinutes}น. + ส่ง ~{sla.travelMinutes}น.
+              </span>
+            </div>
+            <p className="text-[10.5px] text-slate-600 leading-tight">
+              {sla.isSweetSpot 
+                ? '✨ อยู่ในระยะแนะนำ Sweet Spot ได้รับอาหารสดใหม่ ร้อน กรอบ ถึงไวแน่นอน' 
+                : sla.isExtended 
+                ? '🛡️ ร้านอยู่ระยะไกลพิเศษ ไรเดอร์จะใช้กระเป๋าเก็บอุณหภูมิ และระบบเรียกรถด่วนล่วงหน้า' 
+                : '🛵 ระยะมาตรฐานปลอดภัย จัดส่งด้วยความรวดเร็วและคงคุณภาพอาหาร'}
+            </p>
           </div>
 
           {discountAmount > 0 && (
