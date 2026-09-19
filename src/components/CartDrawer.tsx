@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   X, 
@@ -47,6 +47,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
   const effectiveDistance = cartRestaurant ? getRestaurantDistance(cartRestaurant, userLocation) : 0;
   const sla = getDeliverySlaDetails(effectiveDistance, cartRestaurant?.averagePrepTimeMinutes || 15);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Filter coupons that user has redeemed
   const usableCoupons = coupons.filter(c => c.isRedeemed);
 
@@ -70,24 +81,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
 
   if (cart.length === 0 || !cartRestaurant) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      >
         <div 
           id="cart-drawer-empty-container"
-          className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-5"
+          onClick={e => e.stopPropagation()}
+          className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] animate-in zoom-in-95 fade-in duration-200 border border-slate-200/80"
         >
           {/* Top Header with Close Button */}
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
                 <ShoppingBag className="w-4 h-4" />
               </div>
-              <h3 className="font-bold text-sm text-slate-800">ตะกร้าของคุณ</h3>
+              <div>
+                <h3 className="font-bold text-sm text-slate-800">ตะกร้าสินค้า (Pop-up)</h3>
+                <span className="text-[10px] text-slate-400">ยังไม่มีรายการที่เลือก</span>
+              </div>
             </div>
             <button
               id="close-empty-cart-x-btn"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-              title="ปิดตะกร้า"
+              title="ปิดหน้าต่างตะกร้า"
             >
               <X className="w-4 h-4" />
             </button>
@@ -206,29 +224,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in slide-in-from-bottom-5">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+    >
+      <div 
+        onClick={e => e.stopPropagation()}
+        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-in zoom-in-95 fade-in duration-200 border border-slate-200/80"
+      >
         
-        {/* Header */}
-        <div className="p-4 border-b border-slate-150 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-2.5">
+        {/* Pop-up Modal Header */}
+        <div className="p-4 border-b border-slate-150 flex items-center justify-between bg-slate-50/90">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={cartRestaurant.logoImage}
               alt={cartRestaurant.name}
-              className="w-8 h-8 rounded-full object-cover border border-slate-200"
+              className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-2xs shrink-0"
               referrerPolicy="no-referrer"
             />
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 line-clamp-1">{cartRestaurant.name}</h3>
-              <p className="text-[11px] text-slate-500">{cart.length} รายการอาหาร</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] uppercase font-bold tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">
+                  ตะกร้าสินค้า (Pop-up)
+                </span>
+                <span className="text-[10.5px] text-slate-400">• {cart.length} รายการ</span>
+              </div>
+              <h3 className="font-black text-sm text-slate-900 truncate mt-0.5">{cartRestaurant.name}</h3>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               id="clear-cart-btn"
               onClick={clearCart}
-              className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg transition-colors"
+              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2 rounded-xl transition-colors cursor-pointer"
               title="ล้างตะกร้าทั้งหมด"
             >
               <Trash2 className="w-4 h-4" />
@@ -236,7 +265,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
             <button
               id="close-cart-btn"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-200/80 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors"
+              className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+              title="ปิดหน้าต่างตะกร้า"
             >
               <X className="w-4 h-4" />
             </button>

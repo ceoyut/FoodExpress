@@ -8,6 +8,7 @@ import { OrdersScreen } from './screens/OrdersScreen';
 import { RewardsModal } from './components/RewardsModal';
 import { RestaurantDetailModal } from './components/RestaurantDetailModal';
 import { CartDrawer } from './components/CartDrawer';
+import { FloatingQuickCart } from './components/FloatingQuickCart';
 import { CheckoutModal } from './components/CheckoutModal';
 import { LiveTrackingModal } from './components/LiveTrackingModal';
 import { ReviewModal } from './components/ReviewModal';
@@ -62,6 +63,9 @@ const AppContent: React.FC = () => {
 
         {/* Bottom Floating Navigation */}
         <BottomNavigation />
+
+        {/* Floating Quick Cart Pop-up Widget */}
+        <FloatingQuickCart />
 
         {/* Floating Modals & Drawers */}
         {selectedRestaurant && (

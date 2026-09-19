@@ -63,6 +63,7 @@ import {
 } from '../data/riderData';
 import { TRANSLATIONS, Language } from '../data/translations';
 import { createCloudOrder, subscribeToOrders } from '../lib/firebase';
+import { calculateThaiRiderFare } from '../utils/riderFareCalculator';
 import { merchantOrderAudio } from '../utils/merchantOrderAudio';
 
 interface ToastState {
@@ -225,9 +226,13 @@ interface AppContextType {
   reportRiderIssue: (issue: Omit<RiderReportedIssue, 'id' | 'reportedAt' | 'status'>) => RiderReportedIssue;
   resolveRiderIssue: (issueId: string, note?: string) => void;
   
-  // Modals
+  // Modals & Popups
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  isQuickCartPopupOpen: boolean;
+  setIsQuickCartPopupOpen: (open: boolean) => void;
+  lastAddedCartItemName: string | null;
+  setLastAddedCartItemName: (name: string | null) => void;
   isCheckoutOpen: boolean;
   setIsCheckoutOpen: (open: boolean) => void;
   isTrackingOpen: boolean;
@@ -1306,11 +1311,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const currentZone = deliveryZones.find(z => z.id === selectedZoneId) || deliveryZones[0];
     const simulatedOrderId = `DSP-${Date.now().toString().slice(-4)}`;
     const randomRest = RESTAURANTS_DATA[Math.floor(Math.random() * RESTAURANTS_DATA.length)];
-    const distance = Number((1.2 + Math.random() * 2.5).toFixed(1));
-    const distFee = Number((distance * 8).toFixed(2));
+    const distance = Number((1.2 + Math.random() * 4.5).toFixed(1));
     const incentive = currentZone.surgeBonusPerTrip;
-    const tip = [15, 20, 25, 30][Math.floor(Math.random() * 4)];
-    const total = 38 + distFee + incentive + tip;
+    const tip = [0, 15, 20, 30, 40][Math.floor(Math.random() * 5)];
+
+    // Calculate rider fare using real Thai distance standard
+    const thaiFare = calculateThaiRiderFare({
+      distanceKm: distance,
+      zoneType: currentZone.surgeBonusPerTrip > 0 ? 'bkk_cbd' : 'bkk_metro',
+      isPeakHour: incentive > 0,
+      customerTip: tip,
+    });
 
     const newOffer: DispatchQueueOrder = {
       id: simulatedOrderId,
@@ -1327,11 +1338,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       distanceKm: distance,
       itemsCount: 2,
       itemsSummary: `${randomRest?.menu?.[0]?.name || 'ชุดอาหารพิเศษ'} x1, เครื่องดื่ม x1`,
-      baseDeliveryFee: 38.00,
-      distanceFee: distFee,
-      specialIncentive: incentive,
+      baseDeliveryFee: thaiFare.baseFare,
+      distanceFee: thaiFare.distanceFee,
+      specialIncentive: thaiFare.peakSurgeFee + thaiFare.longDistanceSubsidy,
       customerTip: tip,
-      totalTripEarnings: total,
+      totalTripEarnings: thaiFare.totalRiderEarnings,
       matchedZone: currentZone.name,
       status: 'offered',
       offeredToRiderId: activeRider.id,
@@ -1346,21 +1357,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     playRiderChime('dispatch_alert');
 
     addNotification({
-      title: '🚨 มีออเดอร์ใหม่เสนอให้คุณ!',
-      body: `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${total.toFixed(2)} (รวมทิป ฿${tip}) ตอบรับภายใน 20 วินาที`,
+      title: '🚨 มีออเดอร์ใหม่เสนอให้คุณ (คิดตามระยะทางจริง)!',
+      body: `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${thaiFare.totalRiderEarnings.toFixed(2)} (ฐาน ฿${thaiFare.baseFare} + ระยะเกิน ฿${thaiFare.distanceFee}${tip > 0 ? ` + ทิป ฿${tip}` : ''})`,
       type: 'order',
       badge: 'ออเดอร์ใหม่',
     });
 
     triggerToast(
       '🚨 มีออเดอร์ใหม่เข้ามาในคิวของคุณ!',
-      `ร้าน ${randomRest.name} รายได้รอบนี้ ฿${total.toFixed(2)} ตอบรับเลย!`,
+      `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${thaiFare.totalRiderEarnings.toFixed(2)} ตอบรับเลย!`,
       'reward'
     );
   }, [selectedZoneId, deliveryZones, activeRider.id, playRiderChime]);
 
-  // Modals
+  // Modals & Popups
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isQuickCartPopupOpen, setIsQuickCartPopupOpen] = useState(false);
+  const [lastAddedCartItemName, setLastAddedCartItemName] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
@@ -1520,6 +1533,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ];
     });
 
+    setLastAddedCartItemName(menuItem.name);
     triggerToast('เพิ่มลงตะกร้าแล้ว', `${menuItem.name} (${quantity} รายการ) พร้อมสั่งซื้อ`, 'success');
   }, [cartRestaurant, cart.length, triggerToast]);
 
@@ -1536,6 +1550,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updated.length === 0) {
         setCartRestaurant(null);
         setAppliedCoupon(null);
+        setIsQuickCartPopupOpen(false);
       }
       return updated;
     });
@@ -1547,6 +1562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (filtered.length === 0) {
         setCartRestaurant(null);
         setAppliedCoupon(null);
+        setIsQuickCartPopupOpen(false);
       }
       return filtered;
     });
@@ -1556,6 +1572,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart([]);
     setCartRestaurant(null);
     setAppliedCoupon(null);
+    setIsQuickCartPopupOpen(false);
   }, []);
 
   // Wallet & User
@@ -2409,6 +2426,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       resolveRiderIssue,
       isCartOpen,
       setIsCartOpen,
+      isQuickCartPopupOpen,
+      setIsQuickCartPopupOpen,
+      lastAddedCartItemName,
+      setLastAddedCartItemName,
       isCheckoutOpen,
       setIsCheckoutOpen,
       isTrackingOpen,

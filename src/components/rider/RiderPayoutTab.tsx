@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { RiderPayoutSlip } from '../../types';
 import { RiderPayoutSlipModal } from './RiderPayoutSlipModal';
+import { RiderFareStandardsModal } from './RiderFareStandardsModal';
 import { 
   Wallet, 
   ArrowUpRight, 
@@ -19,7 +20,9 @@ import {
   Receipt,
   Download,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Calculator,
+  Info
 } from 'lucide-react';
 
 export const RiderPayoutTab: React.FC = () => {
@@ -32,6 +35,8 @@ export const RiderPayoutTab: React.FC = () => {
 
   const [activeHistoryView, setActiveHistoryView] = useState<'trips' | 'payouts'>('trips');
   const [selectedSlip, setSelectedSlip] = useState<RiderPayoutSlip | null>(null);
+  const [isStandardsModalOpen, setIsStandardsModalOpen] = useState<boolean>(false);
+  const [selectedTripDistance, setSelectedTripDistance] = useState<number>(3.5);
 
   // Cash-out dialog state
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
@@ -173,6 +178,39 @@ export const RiderPayoutTab: React.FC = () => {
             ดาวเฉลี่ย {activeRider.rating.toFixed(2)} ⭐
           </div>
         </div>
+      </div>
+
+      {/* THAI RIDER FARE STANDARDS HIGHLIGHT & EXPLANATION BANNER */}
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              <span>มาตรฐานค่ารอบไรเดอร์ไทย (GPS Distance)</span>
+            </span>
+            <span className="text-xs text-emerald-200">โปร่งใส 100% ไม่หักค่าหัวคิว</span>
+          </div>
+
+          <h3 className="text-sm sm:text-base font-black text-white">
+            สูตรคำนวณตามระยะทางจริง: ฿40.00 (3 กม.แรก) + ฿9.00/กม. ส่วนเกิน + ทิปเต็ม
+          </h3>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            ระบบคำนวณค่ารอบตามระยะทางเลี้ยวจริงบนถนน (Road Distance) พร้อมเงินชดเชยเที่ยววิ่งไกลเกิน 10 กม. (+฿13/กม.) และเงินชดเชยจากแพลตฟอร์มเมื่อลูกค้าใช้โค้ดส่งฟรี
+          </p>
+        </div>
+
+        <button
+          id="open-fare-standards-payout-btn"
+          onClick={() => {
+            setSelectedTripDistance(3.5);
+            setIsStandardsModalOpen(true);
+          }}
+          className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all cursor-pointer shadow-md flex items-center justify-center gap-2 shrink-0 self-start md:self-center"
+        >
+          <Calculator className="w-4 h-4" />
+          <span>จำลองค่ารอบ & ดูตารางเปรียบเทียบ</span>
+        </button>
       </div>
 
       {/* 2. INSTANT CASH-OUT WITHDRAWAL CONSOLE */}
@@ -356,7 +394,7 @@ export const RiderPayoutTab: React.FC = () => {
                 key={trip.id}
                 className="p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
               >
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="font-extrabold text-slate-900">{trip.restaurantName}</span>
                     <span className="text-slate-300">→</span>
@@ -364,23 +402,34 @@ export const RiderPayoutTab: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-mono">({trip.orderId})</span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                    <span>ระยะทาง {trip.distanceKm} กม.</span>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                    <button
+                      onClick={() => {
+                        setSelectedTripDistance(trip.distanceKm);
+                        setIsStandardsModalOpen(true);
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                      title="กดเพื่อดูการแจกแจงสูตรคำนวณตามระยะทางจริง"
+                    >
+                      <Bike className="w-3 h-3 text-emerald-600" />
+                      <span>{trip.distanceKm} กม.</span>
+                    </button>
                     <span>•</span>
-                    <span>ฐาน ฿{trip.baseFee}</span>
-                    <span>•</span>
-                    <span>ระยะทาง ฿{trip.distanceFee}</span>
+                    <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">ฐาน ฿{trip.baseFee} (3 กม.)</span>
+                    {trip.distanceFee > 0 && (
+                      <span className="bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
+                        ระยะเกิน +฿{trip.distanceFee}
+                      </span>
+                    )}
                     {trip.peakBonus > 0 && (
-                      <>
-                        <span>•</span>
-                        <span className="text-amber-700 font-semibold">พีค +฿{trip.peakBonus}</span>
-                      </>
+                      <span className="bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
+                        พีค +฿{trip.peakBonus}
+                      </span>
                     )}
                     {trip.tipAmount > 0 && (
-                      <>
-                        <span>•</span>
-                        <span className="text-emerald-700 font-bold">ทิป +฿{trip.tipAmount}</span>
-                      </>
+                      <span className="bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded font-bold">
+                        ทิป 100% +฿{trip.tipAmount}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -446,6 +495,13 @@ export const RiderPayoutTab: React.FC = () => {
           onClose={() => setSelectedSlip(null)}
         />
       )}
+
+      {/* Thai Rider Fare Standards & Simulator Modal */}
+      <RiderFareStandardsModal
+        isOpen={isStandardsModalOpen}
+        onClose={() => setIsStandardsModalOpen(false)}
+        initialDistanceKm={selectedTripDistance}
+      />
     </div>
   );
 };

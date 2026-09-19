@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { RiderVoiceAssistant } from './RiderVoiceAssistant';
+import { RiderFareStandardsModal } from './RiderFareStandardsModal';
+import { calculateThaiRiderFare } from '../../utils/riderFareCalculator';
 import { 
   Radio, 
   Power, 
@@ -20,7 +22,9 @@ import {
   ShieldCheck, 
   TrendingUp, 
   XCircle, 
-  Play 
+  Play,
+  Calculator,
+  Info
 } from 'lucide-react';
 
 export const RiderQueueTab: React.FC = () => {
@@ -43,6 +47,10 @@ export const RiderQueueTab: React.FC = () => {
   // Incoming offer countdown timer (20 seconds)
   const [countdownSeconds, setCountdownSeconds] = useState<number>(20);
   const currentOfferIdRef = useRef<string | null>(null);
+
+  // Thai Rider Fare Standards Modal State
+  const [isFareModalOpen, setIsFareModalOpen] = useState<boolean>(false);
+  const [fareModalDistance, setFareModalDistance] = useState<number>(3.5);
 
   // Reset and run countdown timer when an incoming trip arrives
   useEffect(() => {
@@ -114,7 +122,21 @@ export const RiderQueueTab: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              id="open-rider-fare-standards-btn"
+              onClick={() => {
+                setFareModalDistance(activeIncomingTrip?.distanceKm || activeDeliveringTrip?.distanceKm || 3.5);
+                setIsFareModalOpen(true);
+              }}
+              className="px-3 py-2 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="ดูตารางมาตรฐานค่ารอบและสูตรคำนวณตามระยะทางจริงในไทย"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">มาตรฐานค่ารอบไทย</span>
+              <span className="sm:hidden">เกณฑ์ค่ารอบ</span>
+            </button>
+
             <button
               id="rider-toggle-shift-btn"
               onClick={toggleRiderShiftStatus}
@@ -300,26 +322,54 @@ export const RiderQueueTab: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>โครงสร้างค่ารอบตามระยะทางจริง (มาตรฐานไทย)</span>
+                    </span>
+                    <button
+                      id="view-fare-formula-completed-step-btn"
+                      onClick={() => {
+                        setFareModalDistance(activeDeliveringTrip.distanceKm);
+                        setIsFareModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Info className="w-3 h-3" />
+                      <span>ดูเกณฑ์คำนวณ</span>
+                    </button>
+                  </div>
+
                   <div className="flex justify-between text-slate-600">
-                    <span>ค่ารอบพื้นฐาน</span>
-                    <span>฿{activeDeliveringTrip.baseDeliveryFee.toFixed(2)}</span>
+                    <span>ค่ารอบพื้นฐาน (0 - 3.0 กม. แรก)</span>
+                    <span className="font-semibold">฿{activeDeliveringTrip.baseDeliveryFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
-                    <span>ค่าระยะทาง ({activeDeliveringTrip.distanceKm} กม.)</span>
-                    <span>฿{activeDeliveringTrip.distanceFee.toFixed(2)}</span>
+                    <span>
+                      ระยะทางส่วนเกิน ({activeDeliveringTrip.distanceKm} กม.
+                      {activeDeliveringTrip.distanceKm > 3.0 ? ` • เกิน ${(activeDeliveringTrip.distanceKm - 3.0).toFixed(1)} กม. x ฿9` : ' • ในระยะตั้งต้น'})
+                    </span>
+                    <span className="font-semibold text-blue-700">+฿{activeDeliveringTrip.distanceFee.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-amber-700">
-                    <span>โบนัสช่วงพีค (Surge)</span>
-                    <span>+฿{activeDeliveringTrip.specialIncentive.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-emerald-700 font-semibold">
-                    <span>ทิปจากลูกค้า (ได้รับ 100%)</span>
-                    <span>+฿{activeDeliveringTrip.customerTip.toFixed(2)}</span>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100 flex justify-between font-black text-sm text-slate-900">
-                    <span>รายได้สุทธิรอบนี้</span>
-                    <span className="text-emerald-600">฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)}</span>
+                  {activeDeliveringTrip.specialIncentive > 0 && (
+                    <div className="flex justify-between text-amber-700">
+                      <span>โบนัสช่วงความต้องการสูง (Rush Hour Surge)</span>
+                      <span className="font-semibold">+฿{activeDeliveringTrip.specialIncentive.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {activeDeliveringTrip.customerTip > 0 && (
+                    <div className="flex justify-between text-emerald-700 font-semibold">
+                      <span>ทิปจากลูกค้า (โอนเข้าไรเดอร์ 100% เต็ม ไม่หัก GP)</span>
+                      <span>+฿{activeDeliveringTrip.customerTip.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center font-black text-sm text-slate-900">
+                    <div>
+                      <span>รายได้สุทธิรอบนี้</span>
+                      <span className="text-[10px] text-slate-500 font-normal block">เงินโอนเข้ากระเป๋าวอลเล็ตทันที</span>
+                    </div>
+                    <span className="text-emerald-600 text-lg">฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -365,18 +415,39 @@ export const RiderQueueTab: React.FC = () => {
             </div>
 
             {/* Earnings Highlight Banner */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 rounded-xl flex items-center justify-between shadow-xs">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-emerald-200">รายได้รอบนี้รวมสุทธิ</span>
-                <div className="text-2xl font-black">฿{activeIncomingTrip.totalTripEarnings.toFixed(2)}</div>
-                <span className="text-[11px] text-emerald-100">
-                  รวมทิปลูกค้า ฿{activeIncomingTrip.customerTip} + โบนัสโซน ฿{activeIncomingTrip.specialIncentive}
-                </span>
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white p-4 rounded-xl space-y-2 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-200">รายได้รอบนี้รวมสุทธิ</span>
+                  <div className="text-2xl font-black">฿{activeIncomingTrip.totalTripEarnings.toFixed(2)}</div>
+                  <span className="text-[11px] text-emerald-100">
+                    รวมทิปลูกค้า ฿{activeIncomingTrip.customerTip} + โบนัสโซน ฿{activeIncomingTrip.specialIncentive}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-emerald-200">ระยะทางจัดส่งจริง</span>
+                  <div className="text-xl font-extrabold">{activeIncomingTrip.distanceKm} กม.</div>
+                  <span className="text-[10px] text-emerald-200">รับใน {activeIncomingTrip.estimatedPickupMinutes} นาที</span>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-emerald-200">ระยะทางจัดส่ง</span>
-                <div className="text-xl font-extrabold">{activeIncomingTrip.distanceKm} กม.</div>
-                <span className="text-[10px] text-emerald-200">รับใน {activeIncomingTrip.estimatedPickupMinutes} นาที</span>
+
+              {/* Thai Standard Formula Badge */}
+              <div className="bg-black/20 backdrop-blur-xs p-2 rounded-lg text-[10.5px] border border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-emerald-100 font-mono">
+                  <span>💡 ฐาน ฿{activeIncomingTrip.baseDeliveryFee.toFixed(0)} (3 กม.)</span>
+                  <span>+ ระยะเกิน ฿{activeIncomingTrip.distanceFee.toFixed(0)}</span>
+                  {activeIncomingTrip.specialIncentive > 0 && <span>+ พีค ฿{activeIncomingTrip.specialIncentive}</span>}
+                  {activeIncomingTrip.customerTip > 0 && <span>+ ทิป ฿{activeIncomingTrip.customerTip}</span>}
+                </div>
+                <button
+                  onClick={() => {
+                    setFareModalDistance(activeIncomingTrip.distanceKm);
+                    setIsFareModalOpen(true);
+                  }}
+                  className="text-white hover:text-amber-200 underline text-[10px] font-bold cursor-pointer shrink-0 ml-2"
+                >
+                  มาตรฐานไทย ↗
+                </button>
               </div>
             </div>
 
@@ -533,6 +604,13 @@ export const RiderQueueTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* THAI RIDER FARE STANDARDS & DISTANCE SIMULATOR MODAL */}
+      <RiderFareStandardsModal
+        isOpen={isFareModalOpen}
+        onClose={() => setIsFareModalOpen(false)}
+        initialDistanceKm={fareModalDistance}
+      />
     </div>
   );
 };

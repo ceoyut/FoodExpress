@@ -1,21 +1,16 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Home, ReceiptText, Gift, User, ShoppingBag, Building2, Bike } from 'lucide-react';
+import { Home, ReceiptText, Gift, User, Building2, Bike } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
   const { 
     activeTab, 
     setActiveTab, 
-    cart, 
-    cartSubtotal, 
-    setIsCartOpen, 
     activeOrder, 
     setIsTrackingOpen,
     activeIncomingTrip,
     t
   } = useApp();
-
-  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <>
@@ -55,31 +50,6 @@ export const BottomNavigation: React.FC = () => {
               <span className="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800">
                 {t('liveMap')}
               </span>
-            </div>
-          </button>
-        </aside>
-      )}
-
-      {/* Floating Cart Button (if cart has items and no active tracker covering) */}
-      {totalCartCount > 0 && (!activeOrder || activeOrder.status === 'delivered') && (
-        <aside 
-          aria-label="Shopping Cart"
-          className="sticky bottom-16 left-0 right-0 px-4 pb-2 z-20 pointer-events-auto"
-        >
-          <button
-            id="floating-cart-summary-btn"
-            onClick={() => setIsCartOpen(true)}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white p-3.5 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-between transition-transform active:scale-[0.99]"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-xs font-extrabold">
-                {totalCartCount}
-              </div>
-              <span className="font-semibold text-sm">{t('viewCart')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm">฿{cartSubtotal.toLocaleString()}</span>
-              <ShoppingBag className="w-4 h-4" />
             </div>
           </button>
         </aside>
