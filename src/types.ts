@@ -480,3 +480,48 @@ export interface RiderReportedIssue {
   resolvedNote?: string;
 }
 
+// ==========================================
+// ADMIN & PLATFORM HQ TYPES
+// ==========================================
+export type AdminRole = 'super_admin' | 'operations' | 'finance' | 'support';
+
+export interface PlatformSystemConfig {
+  defaultGpPercent: number;
+  vatRatePercent: number;
+  withholdingTaxPercent: number;
+  baseDeliveryFee: number;
+  perKmRate: number;
+  peakHourSurcharge: number;
+  autoDispatchEnabled: boolean;
+  autoSettlementTransfer: boolean;
+  isMaintenanceMode: boolean;
+  minWithdrawalAmount: number;
+}
+
+export interface AdminDisputeTicket {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  restaurantName: string;
+  riderName?: string;
+  issueType: 'missing_food' | 'damaged_spill' | 'wrong_order' | 'excessive_delay' | 'overcharge';
+  issueLabel: string;
+  description: string;
+  claimAmount: number;
+  status: 'open' | 'investigating' | 'refunded' | 'rejected';
+  createdAt: string;
+  refundMethod?: 'wallet_credit' | 'promptpay_refund';
+}
+
+export interface PlatformMetricKPI {
+  todayGmv: number;
+  todayOrdersCount: number;
+  todayActiveRiders: number;
+  todayActiveMerchants: number;
+  platformNetRevenue: number;
+  avgDeliveryMinutes: number;
+  orderCompletionRate: number;
+  openDisputesCount: number;
+}
+

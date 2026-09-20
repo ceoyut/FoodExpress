@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { DeviceFrame } from './components/DeviceFrame';
 import { Header } from './components/Header';
@@ -17,8 +17,12 @@ import { WalletTopUpModal } from './components/WalletTopUpModal';
 import { AuthModal } from './components/AuthModal';
 import { MerchantSettlementScreen } from './screens/MerchantSettlementScreen';
 import { RiderHubScreen } from './screens/RiderHubScreen';
+import { AdminHQScreen } from './screens/AdminHQScreen';
 import { MerchantSocialAuthModal } from './components/merchant/MerchantSocialAuthModal';
 import { MerchantGpCalculatorModal } from './components/merchant/MerchantGpCalculatorModal';
+import { RoleSwitcherBar } from './components/RoleSwitcherBar';
+import { INITIAL_MERCHANT_ACCOUNTS } from './data/merchantAuthData';
+import { INITIAL_ACTIVE_RIDER } from './data/riderData';
 
 const AppContent: React.FC = () => {
   const { 
@@ -42,12 +46,38 @@ const AppContent: React.FC = () => {
     setIsMerchantAuthModalOpen,
     isGpCalculatorOpen,
     setIsGpCalculatorOpen,
+    setActiveMerchant,
+    setSelectedSettlementRestId,
+    setActiveRider,
     toast 
   } = useApp();
+
+  // Multi-device sync: check URL parameter on mount (e.g. ?role=merchant or ?role=rider)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get('role');
+    if (roleParam === 'merchant') {
+      const kanda = INITIAL_MERCHANT_ACCOUNTS[0];
+      if (kanda) {
+        setActiveMerchant(kanda);
+        setSelectedSettlementRestId(kanda.restaurantId);
+      }
+      setActiveTab('pos_settlement');
+    } else if (roleParam === 'rider') {
+      setActiveRider(INITIAL_ACTIVE_RIDER);
+      setActiveTab('rider_hub');
+    } else if (roleParam === 'customer') {
+      setActiveTab('home');
+    }
+  }, [setActiveMerchant, setSelectedSettlementRestId, setActiveRider, setActiveTab]);
 
   return (
     <DeviceFrame>
       <div className="flex flex-col h-full bg-[#F6F8F7] font-sans relative">
+        {/* Quick Role Switcher for testing (Customer / Merchant / Rider) */}
+        <RoleSwitcherBar />
+
         {/* Fixed Header (on non-home screens) */}
         {activeTab !== 'home' && <Header />}
 
@@ -58,6 +88,7 @@ const AppContent: React.FC = () => {
           {activeTab === 'rewards' && <RewardsModal />}
           {activeTab === 'pos_settlement' && <MerchantSettlementScreen />}
           {activeTab === 'rider_hub' && <RiderHubScreen />}
+          {activeTab === 'admin_portal' && <AdminHQScreen />}
           {activeTab === 'profile' && <HomeScreen />}
         </main>
 

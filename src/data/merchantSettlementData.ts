@@ -9,6 +9,28 @@ import {
 import { RESTAURANTS_DATA } from './mockData';
 
 export const DEFAULT_MERCHANT_CONFIGS: Record<string, { bank: MerchantBankAccount; config: MerchantSettlementConfig }> = {
+  rest_kanda_roimor: {
+    bank: {
+      bankName: 'ธนาคารกสิกรไทย (KBANK)',
+      bankCode: '004',
+      accountNumber: '088-2-45199-0',
+      accountName: 'บจก. กานดา ร้อยหม้อ ฟู้ด แอนด์ เรสเตอรองต์',
+      promptPayId: '0105566099124',
+      branchName: 'สาขาทองหล่อ ซอย 10',
+    },
+    config: {
+      gpRatePct: 20,
+      paymentFeePct: 1.5,
+      vatPct: 7,
+      whtPct: 3,
+      isCorporate: true,
+      autoTransferTime: '14:00 น.',
+      enableInstantPushNotifications: true,
+      minPendingPayoutThreshold: 5000,
+      enablePendingPayoutAlert: true,
+      dailySalesGoal: 8500,
+    },
+  },
   rest_1: {
     bank: {
       bankName: 'ธนาคารกสิกรไทย (KBANK)',

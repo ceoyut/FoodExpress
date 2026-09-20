@@ -222,14 +222,23 @@ export const HomeScreen: React.FC = () => {
 
         {/* Main Greeting & Heart Button (1:1 with Reference Image) */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
-              สวัสดี Taetae!
-            </h1>
+          <button 
+            id="home-greeting-user-btn"
+            onClick={() => setIsAuthModalOpen(true)}
+            className="text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight group-hover:underline">
+                สวัสดี คุณ{user.name}!
+              </h1>
+              <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.2 rounded-full uppercase">
+                {user.tier}
+              </span>
+            </div>
             <p className="text-xs sm:text-sm font-medium text-white/90 mt-0.5">
-              วันนี้มีอะไรให้เราช่วยไหม?
+              {user.email} • วันนี้มีอะไรให้เราช่วยไหม?
             </p>
-          </div>
+          </button>
 
           {/* Heart Button on Top Right (From Reference Image) */}
           <button

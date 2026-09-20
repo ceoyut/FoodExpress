@@ -28,8 +28,15 @@ import {
   RiderReportedIssue,
   MerchantAccount,
   MerchantSocialProvider,
-  MerchantGpTier
+  MerchantGpTier,
+  AdminRole,
+  PlatformSystemConfig,
+  AdminDisputeTicket
 } from '../types';
+import {
+  INITIAL_PLATFORM_CONFIG,
+  INITIAL_DISPUTES
+} from '../data/adminData';
 import { 
   DEFAULT_USER_LOCATION,
   requestDeviceGeolocation
@@ -76,6 +83,8 @@ interface ToastState {
 interface AppContextType {
   // User & Wallet
   user: UserProfile;
+  setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
+  updateUserProfile: (data: Partial<UserProfile>) => void;
   loginAs: (provider: UserProfile['loginProvider']) => void;
   topUpWallet: (amount: number) => void;
   setWalletBalance: (balance: number) => void;
@@ -162,8 +171,8 @@ interface AppContextType {
   // UI & View State
   deviceMode: DeviceViewMode;
   setDeviceMode: (mode: DeviceViewMode) => void;
-  activeTab: 'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub';
-  setActiveTab: (tab: 'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub') => void;
+  activeTab: 'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub' | 'admin_portal';
+  setActiveTab: (tab: 'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub' | 'admin_portal') => void;
   selectedRestaurant: Restaurant | null;
   setSelectedRestaurant: (r: Restaurant | null) => void;
 
@@ -248,6 +257,16 @@ interface AppContextType {
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   
+  // Admin & HQ Management Portal
+  adminRole: AdminRole;
+  setAdminRole: (role: AdminRole) => void;
+  platformConfig: PlatformSystemConfig;
+  updatePlatformConfig: (newConfig: Partial<PlatformSystemConfig>) => void;
+  disputeTickets: AdminDisputeTicket[];
+  resolveDisputeTicket: (ticketId: string, action: 'refund' | 'reject', refundMethod?: 'wallet_credit' | 'promptpay_refund') => void;
+  reassignOrderRider: (orderId: string, newRiderName: string) => void;
+  cancelOrderByAdmin: (orderId: string, reason: string) => void;
+
   // Cloud & Feedback
   cloudSyncState: 'synced' | 'syncing';
   toast: ToastState | null;
@@ -258,25 +277,25 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 const STORAGE_KEYS = {
-  USER: 'foodexpress_user_v1',
-  CART: 'foodexpress_cart_v1',
-  CART_REST: 'foodexpress_cart_rest_v1',
-  ORDERS: 'foodexpress_orders_v1',
-  ACTIVE_ORDER: 'foodexpress_active_order_v1',
-  REVIEWS: 'foodexpress_reviews_v1',
-  COUPONS: 'foodexpress_coupons_v1',
-  NOTIFS: 'foodexpress_notifs_v1',
-  DEVICE: 'foodexpress_device_v1',
-  MERCHANT_SETTLEMENTS: 'foodexpress_merchant_settlements_v1',
-  MERCHANT_ACCOUNTS: 'foodexpress_merchant_accounts_v1',
-  ACTIVE_MERCHANT: 'foodexpress_active_merchant_v1',
-  RIDER_ACCOUNT: 'foodexpress_rider_account_v1',
-  RIDER_APPLICATIONS: 'foodexpress_rider_apps_v1',
-  RIDER_QUEUE: 'foodexpress_rider_queue_v1',
-  RIDER_DISPATCH_ORDERS: 'foodexpress_rider_dispatch_orders_v1',
-  RIDER_EARNINGS: 'foodexpress_rider_earnings_v1',
-  RIDER_PAYOUT_SLIPS: 'foodexpress_rider_payout_slips_v1',
-  RIDER_ISSUES: 'foodexpress_rider_issues_v1',
+  USER: 'foodexpress_user_v2',
+  CART: 'foodexpress_cart_v2',
+  CART_REST: 'foodexpress_cart_rest_v2',
+  ORDERS: 'foodexpress_orders_v2',
+  ACTIVE_ORDER: 'foodexpress_active_order_v2',
+  REVIEWS: 'foodexpress_reviews_v2',
+  COUPONS: 'foodexpress_coupons_v2',
+  NOTIFS: 'foodexpress_notifs_v2',
+  DEVICE: 'foodexpress_device_v2',
+  MERCHANT_SETTLEMENTS: 'foodexpress_merchant_settlements_v2',
+  MERCHANT_ACCOUNTS: 'foodexpress_merchant_accounts_v2',
+  ACTIVE_MERCHANT: 'foodexpress_active_merchant_v2',
+  RIDER_ACCOUNT: 'foodexpress_rider_account_v2',
+  RIDER_APPLICATIONS: 'foodexpress_rider_apps_v2',
+  RIDER_QUEUE: 'foodexpress_rider_queue_v2',
+  RIDER_DISPATCH_ORDERS: 'foodexpress_rider_dispatch_orders_v2',
+  RIDER_EARNINGS: 'foodexpress_rider_earnings_v2',
+  RIDER_PAYOUT_SLIPS: 'foodexpress_rider_payout_slips_v2',
+  RIDER_ISSUES: 'foodexpress_rider_issues_v2',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -444,7 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const [deviceMode, setDeviceMode] = useState<DeviceViewMode>('responsive');
-  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub' | 'admin_portal'>('home');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
 
   // Language & Internationalization State
@@ -515,7 +534,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  const [selectedSettlementRestId, setSelectedSettlementRestId] = useState<string>('rest_1');
+  const [selectedSettlementRestId, setSelectedSettlementRestId] = useState<string>('rest_kanda_roimor');
   const [selectedSettlementDate, setSelectedSettlementDate] = useState<string>('2026-09-12');
 
   // Persist merchant settlements
@@ -1382,6 +1401,108 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
+  // Admin Portal & Platform HQ Management States
+  const [adminRole, setAdminRole] = useState<AdminRole>('super_admin');
+  const [platformConfig, setPlatformConfig] = useState<PlatformSystemConfig>(() => {
+    try {
+      const saved = localStorage.getItem('foodexpress_platform_config');
+      return saved ? JSON.parse(saved) : INITIAL_PLATFORM_CONFIG;
+    } catch {
+      return INITIAL_PLATFORM_CONFIG;
+    }
+  });
+  const [disputeTickets, setDisputeTickets] = useState<AdminDisputeTicket[]>(() => {
+    try {
+      const saved = localStorage.getItem('foodexpress_dispute_tickets');
+      return saved ? JSON.parse(saved) : INITIAL_DISPUTES;
+    } catch {
+      return INITIAL_DISPUTES;
+    }
+  });
+
+  const updatePlatformConfig = useCallback((newConfig: Partial<PlatformSystemConfig>) => {
+    setPlatformConfig(prev => {
+      const updated = { ...prev, ...newConfig };
+      try {
+        localStorage.setItem('foodexpress_platform_config', JSON.stringify(updated));
+      } catch {
+        // safe
+      }
+      return updated;
+    });
+    triggerToast('อัปเดตการตั้งค่าระบบแล้ว ⚙️', 'บันทึกค่าพารามิเตอร์แพลตฟอร์มส่วนกลางเรียบร้อย', 'success');
+  }, [triggerToast]);
+
+  const resolveDisputeTicket = useCallback((ticketId: string, action: 'refund' | 'reject', refundMethod: 'wallet_credit' | 'promptpay_refund' = 'wallet_credit') => {
+    setDisputeTickets(prev => {
+      const target = prev.find(t => t.id === ticketId);
+      if (!target) return prev;
+
+      if (action === 'refund') {
+        // Automatically credit customer wallet
+        setUser(u => ({
+          ...u,
+          walletBalance: u.walletBalance + target.claimAmount
+        }));
+      }
+
+      const updated = prev.map(t => {
+        if (t.id === ticketId) {
+          return {
+            ...t,
+            status: (action === 'refund' ? 'refunded' : 'rejected') as AdminDisputeTicket['status'],
+            refundMethod
+          };
+        }
+        return t;
+      });
+
+      try {
+        localStorage.setItem('foodexpress_dispute_tickets', JSON.stringify(updated));
+      } catch {
+        // safe
+      }
+
+      return updated;
+    });
+
+    if (action === 'refund') {
+      triggerToast('อนุมัติการคืนเงินเรียบร้อย 💸', 'ระบบโอนเงินชดเชยเข้ากระเป๋าวอลเล็ตของลูกค้าทันที', 'reward');
+    } else {
+      triggerToast('ปฏิเสธคำร้องข้อพิพาท', 'บันทึกผลการตรวจสอบคำร้องเรียบร้อย', 'info');
+    }
+  }, [triggerToast]);
+
+  const reassignOrderRider = useCallback((orderId: string, newRiderName: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          rider: {
+            ...o.rider,
+            name: newRiderName,
+            status: 'assigned'
+          }
+        };
+      }
+      return o;
+    }));
+    triggerToast('โอนมอบหมายงานสำเร็จ 🛵', `มอบหมายออเดอร์ ${orderId} ให้ไรเดอร์ ${newRiderName} แล้ว`, 'success');
+  }, [triggerToast]);
+
+  const cancelOrderByAdmin = useCallback((orderId: string, reason: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        return {
+          ...o,
+          status: 'cancelled' as OrderStatus
+        };
+      }
+      return o;
+    }));
+    triggerToast('ยกเลิกออเดอร์โดยแอดมิน ⚠️', `ออเดอร์ถูกยกเลิกเนื่องจาก: ${reason} พร้อมระบบคืนเงินอัตโนมัติ`, 'info');
+  }, [triggerToast]);
+
   // Simulation & Cloud
   const [simulationSpeed, setSimulationSpeed] = useState<'normal' | 'fast'>('fast');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -1604,6 +1725,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { ...prev, favoriteRestaurantIds: updated };
     });
   }, []);
+
+  const updateUserProfile = useCallback((data: Partial<UserProfile>) => {
+    setUser(prev => ({
+      ...prev,
+      ...data,
+    }));
+    triggerToast('บันทึกข้อมูลสำเร็จ', 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว', 'success');
+  }, [triggerToast]);
 
   const loginAs = useCallback((provider: UserProfile['loginProvider']) => {
     setUser(prev => ({
@@ -2314,12 +2443,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCoupons(AVAILABLE_COUPONS);
     setNotifications(INITIAL_NOTIFICATIONS);
     setAppliedCoupon(null);
-    triggerToast('รีเซ็ตข้อมูลสำเร็จ', 'คืนค่าเริ่มต้นทั้งหมดเรียบร้อย', 'info');
+    setActiveMerchant(INITIAL_MERCHANT_ACCOUNTS[0]);
+    setSelectedSettlementRestId('rest_kanda_roimor');
+    setActiveRider(INITIAL_ACTIVE_RIDER);
+    triggerToast('รีเซ็ตข้อมูลสำเร็จ', 'คืนค่าเริ่มต้นผู้ใช้ทั้ง 3 บัญชี (สมชาย, กานดา, สมหวัง) เรียบร้อย', 'info');
   }, [triggerToast]);
 
   return (
     <AppContext.Provider value={{
       user,
+      setUser,
+      updateUserProfile,
       loginAs,
       topUpWallet,
       setWalletBalance,
@@ -2444,6 +2578,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setReviewingOrder,
       isAuthModalOpen,
       setIsAuthModalOpen,
+      // Admin Portal & Platform HQ Management
+      adminRole,
+      setAdminRole,
+      platformConfig,
+      updatePlatformConfig,
+      disputeTickets,
+      resolveDisputeTicket,
+      reassignOrderRider,
+      cancelOrderByAdmin,
       cloudSyncState,
       toast,
       triggerToast,

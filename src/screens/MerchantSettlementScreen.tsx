@@ -54,6 +54,7 @@ import { SettlementSummaryAlert } from '../components/SettlementSummaryAlert';
 import { NewOrderAlertModal } from '../components/NewOrderAlertModal';
 import { MerchantOrderAlertControlBar } from '../components/MerchantOrderAlertControlBar';
 import { merchantOrderAudio } from '../utils/merchantOrderAudio';
+import { SettlementAutomationBar } from '../components/merchant/SettlementAutomationBar';
 import { Order } from '../types';
 
 export const MerchantSettlementScreen: React.FC = () => {
@@ -883,6 +884,12 @@ export const MerchantSettlementScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Settlement Automation & Merchant KYC Verification Bar */}
+      <SettlementAutomationBar 
+        restaurantId={selectedSettlementRestId} 
+        selectedDate={selectedSettlementDate} 
+      />
 
       {/* Top Status Summary Card */}
       <div 

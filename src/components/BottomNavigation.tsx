@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Home, ReceiptText, Gift, User, Building2, Bike } from 'lucide-react';
+import { Home, ReceiptText, Gift, User, Building2, Bike, ShieldCheck } from 'lucide-react';
 
 export const BottomNavigation: React.FC = () => {
   const { 
@@ -131,7 +131,7 @@ export const BottomNavigation: React.FC = () => {
         <button
           id="nav-tab-profile-btn"
           onClick={() => setActiveTab('profile')}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all ${
             activeTab === 'profile'
               ? 'text-emerald-600 font-semibold'
               : 'text-slate-400 hover:text-slate-600'
@@ -139,6 +139,20 @@ export const BottomNavigation: React.FC = () => {
         >
           <User className="w-5 h-5 mb-0.5" />
           <span className="text-[10px]">{t('navProfile')}</span>
+        </button>
+
+        <button
+          id="nav-tab-admin-hq-btn"
+          onClick={() => setActiveTab('admin_portal')}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all ${
+            activeTab === 'admin_portal'
+              ? 'text-rose-600 font-semibold'
+              : 'text-slate-400 hover:text-rose-500'
+          }`}
+          title="ศูนย์บัญชาการแอดมิน HQ"
+        >
+          <ShieldCheck className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px]">แอดมิน HQ</span>
         </button>
       </nav>
     </>

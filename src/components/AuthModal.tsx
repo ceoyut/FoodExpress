@@ -9,7 +9,14 @@ import {
   Phone, 
   ShieldCheck, 
   LogOut, 
-  Heart 
+  Heart,
+  User,
+  Mail,
+  Wallet,
+  Sparkles,
+  CheckCircle2,
+  UserPlus,
+  KeyRound
 } from 'lucide-react';
 import { RESTAURANTS_DATA } from '../data/mockData';
 
@@ -20,6 +27,8 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const { 
     user, 
+    setUser,
+    updateUserProfile,
     loginAs, 
     resetAllData, 
     setSelectedRestaurant, 
@@ -29,8 +38,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     triggerToast 
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'addresses' | 'favorites'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'register' | 'addresses' | 'favorites'>('profile');
   const [newAddressInput, setNewAddressInput] = useState('');
+
+  // Customer registration / edit state
+  const [regForm, setRegForm] = useState({
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    address: user.savedAddresses[0]?.address || '128/9 ซอยสุขุมวิท 55 (ทองหล่อ), วัฒนา, กทม.',
+    otpCode: '889922',
+  });
+  const [otpSent, setOtpSent] = useState(false);
+  const [enteredOtp, setEnteredOtp] = useState('889922');
+  const [isPhoneVerified, setIsPhoneVerified] = useState(true);
+
+  const handleVerifyOtp = () => {
+    if (enteredOtp.trim() === regForm.otpCode) {
+      setIsPhoneVerified(true);
+      triggerToast('ยืนยัน OTP สำเร็จ!', `เบอร์ ${regForm.phone} ผ่านการรับรองความปลอดภัยแล้ว`, 'success');
+    } else {
+      triggerToast('รหัส OTP ไม่ถูกต้อง', `กรุณากรอกรหัสทดสอบ ${regForm.otpCode}`, 'error');
+    }
+  };
 
   const handleClose = () => {
     setIsAuthModalOpen(false);
@@ -52,6 +82,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTab]);
 
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regForm.name.trim()) {
+      triggerToast('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อ-นามสกุล', 'info');
+      return;
+    }
+    if (!regForm.phone.trim()) {
+      triggerToast('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเบอร์โทรศัพท์', 'info');
+      return;
+    }
+
+    updateUserProfile({
+      name: regForm.name.trim(),
+      phone: regForm.phone.trim(),
+      email: regForm.email.trim() || `${regForm.name.replace(/\s+/g, '').toLowerCase()}@foodexpress.com`,
+    });
+    triggerToast('สมัครสมาชิกสำเร็จ', `ยินดีต้อนรับคุณ ${regForm.name} สู่ FoodExpress!`, 'success');
+    setActiveSubTab('profile');
+  };
+
   const favoriteRestaurants = RESTAURANTS_DATA.filter(r => 
     user.favoriteRestaurantIds.includes(r.id)
   );
@@ -69,17 +119,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       onClick={handleClose}
     >
       <div 
-        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-5 text-slate-800 cursor-default"
+        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-5 text-slate-800 cursor-default"
         onClick={e => e.stopPropagation()}
       >
         
         {/* Header */}
-        <div className="p-4 border-b border-slate-150 flex items-center justify-between bg-slate-50">
+        <div className="p-4 border-b border-slate-150 flex items-center justify-between bg-emerald-50/50">
           <div className="flex items-center gap-3">
             <img
               src={user.avatar}
               alt={user.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500"
+              className="w-11 h-11 rounded-full object-cover ring-2 ring-emerald-500 shadow-xs"
               referrerPolicy="no-referrer"
             />
             <div>
@@ -88,15 +138,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full">
                   {user.tier}
                 </span>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full">
+                  ลูกค้า (Customer)
+                </span>
               </div>
-              <p className="text-[11px] text-slate-500">{user.email}</p>
+              <p className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                <span>{user.phone}</span>
+                <span>•</span>
+                <span>{user.email}</span>
+              </p>
             </div>
           </div>
 
           <button
             id="close-auth-modal-btn"
             onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-slate-200/80 text-slate-700 flex items-center justify-center hover:bg-slate-300 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/80 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors cursor-pointer border border-slate-200"
             title="ปิดหน้าต่าง"
             aria-label="Close"
           >
@@ -105,35 +162,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         </div>
 
         {/* Subtabs */}
-        <div className="flex border-b border-slate-200 px-3 bg-white">
+        <div className="flex border-b border-slate-200 px-2 bg-white overflow-x-auto no-scrollbar">
           <button
             id="auth-subtab-profile-btn"
             onClick={() => setActiveSubTab('profile')}
-            className={`flex-1 py-2.5 text-center font-bold text-xs border-b-2 transition-all ${
+            className={`px-3 py-2.5 text-center font-bold text-xs border-b-2 whitespace-nowrap transition-all ${
               activeSubTab === 'profile'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
-            โซเชียลล็อกอิน
+            ข้อมูลลูกค้า & ล็อกอิน
+          </button>
+
+          <button
+            id="auth-subtab-register-btn"
+            onClick={() => setActiveSubTab('register')}
+            className={`px-3 py-2.5 text-center font-bold text-xs border-b-2 whitespace-nowrap transition-all ${
+              activeSubTab === 'register'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            สมัครสมาชิกใหม่
           </button>
 
           <button
             id="auth-subtab-addresses-btn"
             onClick={() => setActiveSubTab('addresses')}
-            className={`flex-1 py-2.5 text-center font-bold text-xs border-b-2 transition-all ${
+            className={`px-3 py-2.5 text-center font-bold text-xs border-b-2 whitespace-nowrap transition-all ${
               activeSubTab === 'addresses'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
-            ที่อยู่จัดส่ง ({user.savedAddresses.length})
+            ที่อยู่ ({user.savedAddresses.length})
           </button>
 
           <button
             id="auth-subtab-favorites-btn"
             onClick={() => setActiveSubTab('favorites')}
-            className={`flex-1 py-2.5 text-center font-bold text-xs border-b-2 transition-all ${
+            className={`px-3 py-2.5 text-center font-bold text-xs border-b-2 whitespace-nowrap transition-all ${
               activeSubTab === 'favorites'
                 ? 'border-emerald-600 text-emerald-700'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
@@ -146,9 +215,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1 text-xs">
           
-          {/* Social Login Tab */}
+          {/* Customer Profile & Social Login Tab */}
           {activeSubTab === 'profile' && (
             <div className="space-y-4">
+              {/* Active Customer Summary Card */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-50 to-teal-50/40 border border-emerald-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-extrabold text-emerald-950 text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    บัญชีลูกค้าปัจจุบัน (Active Customer)
+                  </span>
+                  <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
+                    ยืนยันตัวตนแล้ว
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-emerald-150">
+                  <div className="bg-white/80 p-2 rounded-xl border border-emerald-100">
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <Wallet className="w-3 h-3 text-emerald-600" /> วอลเล็ต
+                    </span>
+                    <p className="font-black text-xs text-emerald-900 mt-0.5">
+                      ฿{user.walletBalance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <div className="bg-white/80 p-2 rounded-xl border border-emerald-100">
+                    <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-500" /> คะแนนสะสม
+                    </span>
+                    <p className="font-black text-xs text-amber-900 mt-0.5">
+                      {user.loyaltyPoints} แต้ม ({user.tier})
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Login */}
               <div className="space-y-1">
                 <span className="font-bold text-slate-900 text-xs block">
                   เข้าสู่ระบบด้วยโซเชียลมีเดีย (Social Login)
@@ -187,17 +289,173 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               </div>
 
               {/* Reset Data Button */}
-              <div className="pt-3 border-t border-slate-100">
+              <div className="pt-2 border-t border-slate-100">
                 <button
                   id="reset-demo-data-btn"
                   onClick={resetAllData}
-                  className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>รีเซ็ตข้อมูลตัวอย่างกลับเป็นค่าเริ่มต้น (Reset Demo Data)</span>
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Customer Registration Flow Tab */}
+          {activeSubTab === 'register' && (
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <h4 className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-emerald-600" />
+                  ทดสอบระบบสมัครสมาชิกสำหรับลูกค้า (Customer Registration)
+                </h4>
+                <p className="text-[11px] text-emerald-800 mt-1">
+                  กรอกข้อมูลเพื่อจำลองการเปิดบัญชีลูกค้าใหม่ พร้อมรับสิทธิประโยชน์และโบนัสแรกเข้า
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    ชื่อ - นามสกุล *
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={regForm.name}
+                      onChange={e => setRegForm({ ...regForm, name: e.target.value })}
+                      placeholder="เช่น สมชาย สายใจ"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-emerald-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700">
+                      เบอร์โทรศัพท์ (สำหรับรับรหัส SMS OTP) *
+                    </label>
+                    {isPhoneVerified && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        ยืนยัน OTP แล้ว
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="tel"
+                        value={regForm.phone}
+                        onChange={e => {
+                          setRegForm({ ...regForm, phone: e.target.value });
+                          setIsPhoneVerified(false);
+                        }}
+                        placeholder="081-992-3344"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-emerald-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpSent(true);
+                        setIsPhoneVerified(false);
+                        triggerToast('ส่งรหัส OTP สำเร็จ 💬', `รหัสยืนยันตัวตน SMS คือ ${regForm.otpCode}`, 'info');
+                      }}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-[11px] font-bold text-slate-700 shrink-0 cursor-pointer"
+                    >
+                      {otpSent ? 'ส่ง OTP ใหม่' : 'รับ OTP'}
+                    </button>
+                  </div>
+
+                  {/* Interactive OTP Verification Box */}
+                  {otpSent && !isPhoneVerified && (
+                    <div className="mt-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-amber-950 font-bold">
+                        <span className="flex items-center gap-1">
+                          <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                          กรอกรหัส 6 หลักจาก SMS
+                        </span>
+                        <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                          รหัสทดสอบ: {regForm.otpCode}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={enteredOtp}
+                          onChange={e => setEnteredOtp(e.target.value)}
+                          placeholder="889922"
+                          className="flex-1 px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold tracking-widest text-center focus:outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                        >
+                          ยืนยัน OTP
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isPhoneVerified && (
+                    <p className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 inline" />
+                      เบอร์โทรศัพท์ผ่านการยืนยันตัวตนด้วย SMS OTP เรียบร้อย (AIS/True SMS Gateway)
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    อีเมล (สำหรับใบเสร็จอิเล็กทรอนิกส์)
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="email"
+                      value={regForm.email}
+                      onChange={e => setRegForm({ ...regForm, email: e.target.value })}
+                      placeholder="somchai.saijai@foodexpress.com"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    ที่อยู่จัดส่งเริ่มต้น
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={regForm.address}
+                      onChange={e => setRegForm({ ...regForm, address: e.target.value })}
+                      placeholder="บ้านเลขที่, ถนน, แขวง, เขต"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>บันทึกและเปิดใช้งานบัญชีลูกค้านี้</span>
+                </button>
+              </div>
+            </form>
           )}
 
           {/* Saved Addresses Tab */}

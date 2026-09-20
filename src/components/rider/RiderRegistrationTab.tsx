@@ -24,7 +24,11 @@ import {
   MapPin,
   Building2,
   FileCheck2,
-  Filter
+  Filter,
+  Camera,
+  Fingerprint,
+  RefreshCw,
+  Award
 } from 'lucide-react';
 
 export const RiderRegistrationTab: React.FC = () => {
@@ -33,7 +37,8 @@ export const RiderRegistrationTab: React.FC = () => {
     submitRiderApplication, 
     updateApplicationStatus, 
     deliveryZones,
-    setActiveRider 
+    setActiveRider,
+    triggerToast 
   } = useApp();
 
   const [activeSubView, setActiveSubView] = useState<'form' | 'directory'>('form');
@@ -62,6 +67,16 @@ export const RiderRegistrationTab: React.FC = () => {
   });
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [faceLivenessStatus, setFaceLivenessStatus] = useState<'idle' | 'scanning' | 'passed'>('passed');
+  const [cidCheckRef, setCidCheckRef] = useState<string>('CID-2026-BKK-88992');
+
+  const handleSimulateFaceScan = () => {
+    setFaceLivenessStatus('scanning');
+    setTimeout(() => {
+      setFaceLivenessStatus('passed');
+      triggerToast('สแกนใบหน้าสำเร็จ!', 'ตรวจพบใบหน้าจริง (Liveness 99.8%) ผ่านการรับรองความปลอดภัยขั้นสูง', 'success');
+    }, 1200);
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -641,6 +656,77 @@ export const RiderRegistrationTab: React.FC = () => {
                     <div>
                       <span className="text-xs font-bold text-emerald-950 block">ภาพยานพาหนะ</span>
                       <span className="text-[10px] text-emerald-700">ป้ายทะเบียนตรงกับเอกสาร</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recommendation 3: Face Liveness Detection & CID Criminal Check */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* 1. Biometric Face Liveness */}
+                  <div className="p-3.5 rounded-2xl border border-sky-200 bg-sky-50/60 flex flex-col justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-sky-950 block">
+                            สแกนใบหน้าตรวจสอบตัวจริง (Face Liveness)
+                          </span>
+                          <span className="text-[10px] text-sky-700">
+                            ตรวจจับการกะพริบตา & ป้องกันการใช้รูปถ่ายปลอม
+                          </span>
+                        </div>
+                      </div>
+                      {faceLivenessStatus === 'passed' && (
+                        <span className="text-[10px] font-bold bg-sky-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                          <Check className="w-3 h-3" />
+                          ผ่าน (99.8%)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-sky-200/60">
+                      <span className="text-[11px] text-sky-800">
+                        {faceLivenessStatus === 'passed' ? 'ตรวจยืนยันอัตลักษณ์ชีวมิติเรียบร้อย' : 'พร้อมสำหรับการตรวจสอบใบหน้า'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleSimulateFaceScan}
+                        disabled={faceLivenessStatus === 'scanning'}
+                        className="px-2.5 py-1 bg-white hover:bg-sky-100 border border-sky-300 text-sky-700 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${faceLivenessStatus === 'scanning' ? 'animate-spin' : ''}`} />
+                        <span>{faceLivenessStatus === 'scanning' ? 'กำลังสแกน...' : 'ทดสอบสแกนใหม่'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Criminal Background Check */}
+                  <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/60 flex flex-col justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-emerald-950 block">
+                            ตรวจประวัติอาชญากรรม (สตช. / CID)
+                          </span>
+                          <span className="text-[10px] text-emerald-700">
+                            กองทะเบียนประวัติอาชญากร สำนักงานตำรวจแห่งชาติ
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                        <Check className="w-3 h-3" />
+                        ไม่พบประวัติ
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60 text-[11px] text-emerald-800">
+                      <span>เลขที่อ้างอิง: <strong className="font-mono text-emerald-950">{cidCheckRef}</strong></span>
+                      <span className="text-[10px] text-emerald-700">สถานะ: อนุมัติผ่านเกณฑ์</span>
                     </div>
                   </div>
                 </div>
