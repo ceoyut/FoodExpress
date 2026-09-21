@@ -343,7 +343,7 @@ export const E2eSimulationModal: React.FC<E2eSimulationModalProps> = ({ isOpen, 
                     ขั้นตอนที่ 1: คุณสมชาย สายใจ (ลูกค้า) สั่งอาหาร
                   </span>
                   <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">
-                    ยอดเงินวอลเล็ต: ฿{user.walletBalance.toLocaleString()}
+                    ยอดเงินวอลเล็ต: ฿{(user?.walletBalance ?? 0).toLocaleString()}
                   </span>
                 </div>
                 <p className="text-emerald-800 text-xs leading-relaxed">

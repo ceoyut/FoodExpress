@@ -401,7 +401,7 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
     const csvContent = '\uFEFF' + [
       `รายงานสรุปยอดขายรายสัปดาห์ - ${currentRestaurant.name}`,
       `ช่วงเวลา: ${weekPeriod === 'current' ? '7-13 ก.ย. 2026' : '31 ส.ค. - 6 ก.ย. 2026'}`,
-      `ยอดขายรวมทั้งสัปดาห์: ฿${weeklySummary.totalGross.toLocaleString()} | เงินโอนสุทธิ: ฿${weeklySummary.totalNet.toLocaleString()}`,
+      `ยอดขายรวมทั้งสัปดาห์: ฿${(weeklySummary?.totalGross ?? 0).toLocaleString()} | เงินโอนสุทธิ: ฿${(weeklySummary?.totalNet ?? 0).toLocaleString()}`,
       '',
       headers.join(','),
       ...rows.map(r => r.join(','))
@@ -765,10 +765,10 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
 
                 {showTargetLine && (
                   <ReferenceLine 
-                    y={weeklySummary.dailyAverageGross} 
+                    y={weeklySummary?.dailyAverageGross ?? 0} 
                     stroke="#f59e0b" 
                     strokeDasharray="4 4" 
-                    label={{ value: `ค่าเฉลี่ย ฿${weeklySummary.dailyAverageGross.toLocaleString()}`, fill: '#b45309', fontSize: 10, position: 'right' }} 
+                    label={{ value: `ค่าเฉลี่ย ฿${(weeklySummary?.dailyAverageGross ?? 0).toLocaleString()}`, fill: '#b45309', fontSize: 10, position: 'right' }} 
                   />
                 )}
 
@@ -863,10 +863,10 @@ export const WeeklyRevenueSummaryView: React.FC<WeeklyRevenueSummaryViewProps> =
                 />
                 {showTargetLine && (
                   <ReferenceLine 
-                    y={weeklySummary.dailyAverageGross} 
+                    y={weeklySummary?.dailyAverageGross ?? 0} 
                     stroke="#f59e0b" 
                     strokeDasharray="4 4" 
-                    label={{ value: `เฉลี่ย ฿${weeklySummary.dailyAverageGross.toLocaleString()}`, fill: '#b45309', fontSize: 10, position: 'insideTopLeft' }} 
+                    label={{ value: `เฉลี่ย ฿${(weeklySummary?.dailyAverageGross ?? 0).toLocaleString()}`, fill: '#b45309', fontSize: 10, position: 'insideTopLeft' }} 
                   />
                 )}
                 <Area 

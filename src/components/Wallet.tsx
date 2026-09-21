@@ -99,7 +99,7 @@ export const Wallet: React.FC<WalletProps> = ({
             </div>
 
             <span className={`text-xs font-black leading-tight ${isLowBalance ? 'text-rose-950' : 'text-emerald-950'}`}>
-              ฿{user.walletBalance.toLocaleString()}
+              ฿{(user?.walletBalance ?? 0).toLocaleString()}
             </span>
           </div>
         </button>
@@ -158,7 +158,7 @@ export const Wallet: React.FC<WalletProps> = ({
             <div className="flex items-baseline justify-between mb-1">
               <span className="text-[11px] text-slate-500">{t('currentBalance')}</span>
               <span className={`text-lg font-black ${isLowBalance ? 'text-rose-600' : 'text-slate-900'}`}>
-                ฿{user.walletBalance.toLocaleString()}
+                ฿{(user?.walletBalance ?? 0).toLocaleString()}
               </span>
             </div>
 

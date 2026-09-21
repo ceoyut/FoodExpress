@@ -302,7 +302,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
                   )}
                 </div>
                 <div className="font-extrabold text-slate-900 mt-1">
-                  ฿{(item.unitPrice * item.quantity).toLocaleString()}
+                  ฿{(((item?.unitPrice ?? 0) * (item?.quantity ?? 1)) || 0).toLocaleString()}
                 </div>
               </div>
 
@@ -412,7 +412,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
         <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2 text-xs">
           <div className="flex justify-between text-slate-600">
             <span>รวมค่าอาหาร</span>
-            <span>฿{cartSubtotal.toLocaleString()}</span>
+            <span>฿{(cartSubtotal ?? 0).toLocaleString()}</span>
           </div>
 
           <div className="flex justify-between text-slate-600">
@@ -452,7 +452,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
           {discountAmount > 0 && (
             <div className="flex justify-between text-rose-600 font-semibold">
               <span>ส่วนลดจากคูปอง ({appliedCoupon?.code})</span>
-              <span>-฿{discountAmount.toLocaleString()}</span>
+              <span>-฿{(discountAmount ?? 0).toLocaleString()}</span>
             </div>
           )}
 
@@ -465,7 +465,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
               </div>
             </div>
             <span className="font-black text-xl text-emerald-700">
-              ฿{finalTotal.toLocaleString()}
+              ฿{(finalTotal ?? 0).toLocaleString()}
             </span>
           </div>
 

@@ -132,7 +132,7 @@ export const AdminHQScreen: React.FC = () => {
               <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-xl font-black text-white font-mono">
-              ฿{todayGmv.toLocaleString()}
+              ฿{(todayGmv ?? 0).toLocaleString()}
             </div>
             <div className="text-[10px] text-emerald-400 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
@@ -142,11 +142,11 @@ export const AdminHQScreen: React.FC = () => {
 
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-1">
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span>รายได้สุทธิระบบ (GP {platformConfig.defaultGpPercent}%)</span>
+              <span>รายได้สุทธิระบบ (GP {platformConfig?.defaultGpPercent ?? 25}%)</span>
               <Sparkles className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-xl font-black text-amber-400 font-mono">
-              ฿{estimatedNetRevenue.toLocaleString()}
+              ฿{(estimatedNetRevenue ?? 0).toLocaleString()}
             </div>
             <div className="text-[10px] text-slate-400">
               หักค่าเกตเวย์ 1.5% แล้ว
@@ -562,10 +562,10 @@ export const AdminHQScreen: React.FC = () => {
                     </div>
 
                     <div className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
-                      <span>ยอดขายรวม: <strong className="text-white font-mono">฿{settlement.grossSales.toLocaleString()}</strong></span>
-                      <span>หัก GP: <strong className="text-rose-400 font-mono">-฿{settlement.gpDeductionAmount.toLocaleString()}</strong></span>
-                      <span>ภาษี ณ ที่จ่าย: <strong className="text-amber-400 font-mono">฿{settlement.withholdingTaxAmount}</strong></span>
-                      <span>ยอดโอนสุทธิ: <strong className="text-emerald-400 text-sm font-mono">฿{settlement.netPayoutAmount.toLocaleString()}</strong></span>
+                      <span>ยอดขายรวม: <strong className="text-white font-mono">฿{(settlement.grossSales ?? 0).toLocaleString()}</strong></span>
+                      <span>หัก GP: <strong className="text-rose-400 font-mono">-฿{(settlement.gpDeductionAmount ?? 0).toLocaleString()}</strong></span>
+                      <span>ภาษี ณ ที่จ่าย: <strong className="text-amber-400 font-mono">฿{settlement.withholdingTaxAmount ?? 0}</strong></span>
+                      <span>ยอดโอนสุทธิ: <strong className="text-emerald-400 text-sm font-mono">฿{(settlement.netPayoutAmount ?? 0).toLocaleString()}</strong></span>
                     </div>
 
                     {settlement.transferRefNumber && (

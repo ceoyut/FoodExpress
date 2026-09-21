@@ -190,7 +190,7 @@ export const HomeScreen: React.FC = () => {
               title="เติมเงิน / กระเป๋าเงิน"
             >
               <WalletIcon className="w-3.5 h-3.5 text-white" />
-              <span>฿{user.walletBalance.toLocaleString()}</span>
+              <span>฿{(user?.walletBalance ?? 0).toLocaleString()}</span>
             </button>
 
             {/* Quick Points Pill */}
@@ -201,7 +201,7 @@ export const HomeScreen: React.FC = () => {
               title="ดูคะแนนสะสมและแลกรางวัล"
             >
               <Sparkles className="w-3 h-3 fill-slate-950" />
-              <span>{user.loyaltyPoints} แต้ม</span>
+              <span>{user?.loyaltyPoints ?? 0} แต้ม</span>
             </button>
 
             {/* Notifications */}

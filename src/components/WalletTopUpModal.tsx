@@ -54,7 +54,7 @@ export const WalletTopUpModal: React.FC<WalletTopUpModalProps> = ({ onClose }) =
                 )}
               </div>
               <p className="text-[11px] text-slate-500">
-                {t('currentBalance')}: ฿{user.walletBalance.toLocaleString()}
+                {t('currentBalance')}: ฿{(user?.walletBalance ?? 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -177,7 +177,7 @@ export const WalletTopUpModal: React.FC<WalletTopUpModalProps> = ({ onClose }) =
           <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex justify-between items-center text-xs">
             <span className="text-emerald-900 font-medium">{t('balanceAfterTopUp')}</span>
             <span className="font-black text-sm text-emerald-800">
-              ฿{(user.walletBalance + amount).toLocaleString()}
+              ฿{((user?.walletBalance ?? 0) + (amount ?? 0)).toLocaleString()}
             </span>
           </div>
 
@@ -193,7 +193,7 @@ export const WalletTopUpModal: React.FC<WalletTopUpModalProps> = ({ onClose }) =
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>{t('confirmTopUp')} ฿{amount.toLocaleString()}</span>
+                <span>{t('confirmTopUp')} ฿{(amount ?? 0).toLocaleString()}</span>
               </>
             )}
           </button>

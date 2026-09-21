@@ -1030,7 +1030,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                       handleOpenSettings();
                     }}
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer border transition-colors ${
-                      currentSettlement && currentSettlement.netPayoutPayable >= (currentSettlement.config?.minPendingPayoutThreshold || 5000)
+                      currentSettlement && (currentSettlement?.netPayoutPayable ?? 0) >= (currentSettlement?.config?.minPendingPayoutThreshold || 5000)
                         ? 'bg-amber-500 text-white border-amber-600 animate-pulse'
                         : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100'
                     }`}
@@ -1329,18 +1329,18 @@ export const MerchantSettlementScreen: React.FC = () => {
               <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 block">1. ยอดขายรวม (Gross)</span>
                 <div className="text-base font-black text-slate-900">
-                  ฿{currentSettlement.grossSales.toLocaleString()}
+                  ฿{(currentSettlement?.grossSales ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-emerald-600 font-semibold block">
-                  {currentSettlement.completedOrdersCount} ออเดอร์สำเร็จ
+                  {currentSettlement?.completedOrdersCount ?? 0} ออเดอร์สำเร็จ
                 </span>
               </div>
 
               {/* 2. Platform GP */}
               <div className="p-3 rounded-2xl bg-white border border-rose-100 shadow-2xs space-y-1">
-                <span className="text-[10px] font-bold text-rose-500 block">2. หัก ค่า GP ({currentSettlement.config.gpRatePct}%)</span>
+                <span className="text-[10px] font-bold text-rose-500 block">2. หัก ค่า GP ({currentSettlement?.config?.gpRatePct ?? 20}%)</span>
                 <div className="text-base font-black text-rose-600">
-                  -฿{currentSettlement.platformGpAmount.toLocaleString()}
+                  -฿{(currentSettlement?.platformGpAmount ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-slate-400 block">
                   ค่าคอมมิชชันแพลตฟอร์ม
@@ -1349,9 +1349,9 @@ export const MerchantSettlementScreen: React.FC = () => {
 
               {/* 3. Payment Gateway MDR */}
               <div className="p-3 rounded-2xl bg-white border border-rose-100 shadow-2xs space-y-1">
-                <span className="text-[10px] font-bold text-rose-500 block">3. หัก MDR ({currentSettlement.config.paymentFeePct}%)</span>
+                <span className="text-[10px] font-bold text-rose-500 block">3. หัก MDR ({currentSettlement?.config?.paymentFeePct ?? 1.5}%)</span>
                 <div className="text-base font-black text-rose-600">
-                  -฿{currentSettlement.paymentProcessingFee.toLocaleString()}
+                  -฿{(currentSettlement?.paymentProcessingFee ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-slate-400 block">
                   ค่าประมวลผลบัตร/QR
@@ -1362,7 +1362,7 @@ export const MerchantSettlementScreen: React.FC = () => {
               <div className="p-3 rounded-2xl bg-white border border-amber-100 shadow-2xs space-y-1">
                 <span className="text-[10px] font-bold text-amber-600 block">4. หัก VAT 7%</span>
                 <div className="text-base font-black text-amber-700">
-                  -฿{currentSettlement.vatOnFees.toLocaleString()}
+                  -฿{(currentSettlement?.vatOnFees ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-slate-400 block">
                   7% ของค่าบริการ GP+MDR
@@ -1373,7 +1373,7 @@ export const MerchantSettlementScreen: React.FC = () => {
               <div className="p-3 rounded-2xl bg-white border border-blue-100 shadow-2xs space-y-1">
                 <span className="text-[10px] font-bold text-blue-600 block">5. คืนภาษี หัก ณ ที่จ่าย</span>
                 <div className="text-base font-black text-blue-700">
-                  +฿{currentSettlement.withholdingTax.toLocaleString()}
+                  +฿{(currentSettlement?.withholdingTax ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-slate-400 block">
                   WHT 3% นิติบุคคล
@@ -1384,7 +1384,7 @@ export const MerchantSettlementScreen: React.FC = () => {
               <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                 <span className="text-[10px] font-bold text-slate-500 block">6. หักเงินสดหน้าร้าน</span>
                 <div className="text-base font-black text-slate-700">
-                  -฿{currentSettlement.cashCollectedByStore.toLocaleString()}
+                  -฿{(currentSettlement?.cashCollectedByStore ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-slate-400 block">
                   ร้านรับเงินสดแล้ว
@@ -1395,7 +1395,7 @@ export const MerchantSettlementScreen: React.FC = () => {
               <div className="p-3 rounded-2xl bg-emerald-600 text-white shadow-md space-y-1 col-span-2 sm:col-span-1">
                 <span className="text-[10px] font-black text-emerald-100 block">7. สุทธิโอนเข้าร้าน</span>
                 <div className="text-lg font-black text-white">
-                  ฿{currentSettlement.netPayoutPayable.toLocaleString()}
+                  ฿{(currentSettlement?.netPayoutPayable ?? 0).toLocaleString()}
                 </div>
                 <span className="text-[9px] text-emerald-200 font-semibold block">
                   Net Merchant Payout
@@ -1409,14 +1409,14 @@ export const MerchantSettlementScreen: React.FC = () => {
             <div 
               id="banner-pending-payout-threshold"
               className={`mx-4 sm:mx-6 mt-4 p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-                currentSettlement.netPayoutPayable >= (currentSettlement.config?.minPendingPayoutThreshold || 5000)
+                (currentSettlement?.netPayoutPayable ?? 0) >= (currentSettlement?.config?.minPendingPayoutThreshold || 5000)
                   ? 'bg-amber-500/10 border-amber-300 text-amber-950'
                   : 'bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
               <div className="flex items-start sm:items-center gap-2.5">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold ${
-                  currentSettlement.netPayoutPayable >= (currentSettlement.config?.minPendingPayoutThreshold || 5000)
+                  (currentSettlement?.netPayoutPayable ?? 0) >= (currentSettlement?.config?.minPendingPayoutThreshold || 5000)
                     ? 'bg-amber-500 text-white shadow-2xs animate-pulse'
                     : 'bg-slate-200 text-slate-600'
                 }`}>
@@ -1425,21 +1425,21 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-xs">
-                      เกณฑ์แจ้งเตือนยอดรอโอน (Pending Payout Threshold): ฿{(currentSettlement.config?.minPendingPayoutThreshold || 5000).toLocaleString()}
+                      เกณฑ์แจ้งเตือนยอดรอโอน (Pending Payout Threshold): ฿{(currentSettlement?.config?.minPendingPayoutThreshold || 5000).toLocaleString()}
                     </span>
-                    {currentSettlement.netPayoutPayable >= (currentSettlement.config?.minPendingPayoutThreshold || 5000) ? (
+                    {(currentSettlement?.netPayoutPayable ?? 0) >= (currentSettlement?.config?.minPendingPayoutThreshold || 5000) ? (
                       <span className="text-[10px] font-extrabold bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3 text-white" />
-                        <span>เกินเกณฑ์แจ้งเตือนแล้ว (+฿{(currentSettlement.netPayoutPayable - (currentSettlement.config?.minPendingPayoutThreshold || 5000)).toLocaleString()})</span>
+                        <span>เกินเกณฑ์แจ้งเตือนแล้ว (+฿{Math.max(0, (currentSettlement?.netPayoutPayable ?? 0) - (currentSettlement?.config?.minPendingPayoutThreshold || 5000)).toLocaleString()})</span>
                       </span>
                     ) : (
                       <span className="text-[10px] font-semibold bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
-                        ยังไม่ถึงเกณฑ์ (ขาดอีก ฿{((currentSettlement.config?.minPendingPayoutThreshold || 5000) - currentSettlement.netPayoutPayable).toLocaleString()})
+                        ยังไม่ถึงเกณฑ์ (ขาดอีก ฿{Math.max(0, (currentSettlement?.config?.minPendingPayoutThreshold || 5000) - (currentSettlement?.netPayoutPayable ?? 0)).toLocaleString()})
                       </span>
                     )}
                   </div>
                   <p className="text-[11px] text-slate-600 mt-0.5">
-                    {currentSettlement.netPayoutPayable >= (currentSettlement.config?.minPendingPayoutThreshold || 5000)
+                    {(currentSettlement?.netPayoutPayable ?? 0) >= (currentSettlement?.config?.minPendingPayoutThreshold || 5000)
                       ? 'ยอดรอโอนข้ามเกณฑ์ที่กำหนดแล้ว ระบบได้ส่งการแจ้งเตือน In-App Notification ให้ทราบเรียบร้อย สามารถอนุมัติโอนเงินได้ทันที'
                       : 'ระบบจะส่ง In-App Notification แจ้งเตือนอัตโนมัติเมื่อยอดเงินรอโอนสะสมถึงหรือข้ามเกณฑ์ขั้นต่ำนี้'}
                   </p>
@@ -1512,7 +1512,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                   className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm flex items-center gap-2 shadow-md shadow-emerald-600/30 transition-transform active:scale-95 cursor-pointer"
                 >
                   <DollarSign className="w-4 h-4" />
-                  <span>อนุมัติโอนเงิน ฿{currentSettlement.netPayoutPayable.toLocaleString()}</span>
+                  <span>อนุมัติโอนเงิน ฿{(currentSettlement?.netPayoutPayable ?? 0).toLocaleString()}</span>
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -1635,15 +1635,15 @@ export const MerchantSettlementScreen: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-3 text-right font-bold text-slate-900">
-                        {isDelivered ? `฿${order.grossAmount.toLocaleString()}` : <span className="text-slate-400 line-through">฿{order.grossAmount}</span>}
+                        {isDelivered ? `฿${(order.grossAmount ?? 0).toLocaleString()}` : <span className="text-slate-400 line-through">฿{order.grossAmount ?? 0}</span>}
                       </td>
 
                       <td className="py-3 px-3 text-right font-bold text-rose-600">
-                        {isDelivered ? `-฿${order.platformGp.toLocaleString()}` : '-'}
+                        {isDelivered ? `-฿${(order.platformGp ?? 0).toLocaleString()}` : '-'}
                       </td>
 
                       <td className="py-3 px-3 text-right font-black text-emerald-700">
-                        {isDelivered ? `฿${order.netPayout.toLocaleString()}` : <span className="text-slate-400 font-normal">ยกเลิก</span>}
+                        {isDelivered ? `฿${(order.netPayout ?? 0).toLocaleString()}` : <span className="text-slate-400 font-normal">ยกเลิก</span>}
                       </td>
 
                       <td className="py-3 px-3 text-center">
@@ -1990,10 +1990,10 @@ export const MerchantSettlementScreen: React.FC = () => {
                                   {isCrossed ? (
                                     <>
                                       <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                      <span>เกินเกณฑ์แล้ว! (+฿{(currentPending - targetThreshold).toLocaleString()})</span>
+                                      <span>เกินเกณฑ์แล้ว! (+฿{Math.max(0, (currentPending ?? 0) - (targetThreshold ?? 0)).toLocaleString()})</span>
                                     </>
                                   ) : (
-                                    <span>ยังไม่ถึงเกณฑ์ (ขาดอีก ฿{(targetThreshold - currentPending).toLocaleString()})</span>
+                                    <span>ยังไม่ถึงเกณฑ์ (ขาดอีก ฿{Math.max(0, (targetThreshold ?? 0) - (currentPending ?? 0)).toLocaleString()})</span>
                                   )}
                                 </span>
                                 <span className="font-bold text-slate-600">
@@ -2120,7 +2120,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                           </div>
                           <div className="flex items-center justify-between text-[10px] mt-1 font-bold">
                             <span className={isMet ? 'text-emerald-700' : 'text-slate-500'}>
-                              {isMet ? `🎉 ถึงเป้าหมายแล้ว (+฿${(currentSales - targetGoal).toLocaleString()})` : `ยังขาดอีก ฿${(targetGoal - currentSales).toLocaleString()}`}
+                              {isMet ? `🎉 ถึงเป้าหมายแล้ว (+฿${Math.max(0, (currentSales ?? 0) - (targetGoal ?? 0)).toLocaleString()})` : `ยังขาดอีก ฿${Math.max(0, (targetGoal ?? 0) - (currentSales ?? 0)).toLocaleString()}`}
                             </span>
                             <span className={isMet ? 'text-emerald-700' : 'text-slate-600'}>
                               {Math.round((currentSales / targetGoal) * 100)}%
@@ -2258,7 +2258,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
                   <span className="text-slate-700 font-bold">ยอดเงินสุทธิที่โอน:</span>
                   <span className="text-lg font-black text-emerald-700">
-                    ฿{currentSettlement.netPayoutPayable.toLocaleString()}
+                    ฿{(currentSettlement?.netPayoutPayable ?? 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -2343,34 +2343,34 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <div className="py-2 border-y border-dashed border-slate-300 space-y-1.5">
                   <div className="flex justify-between font-bold text-slate-900">
                     <span>1. ยอดขายอาหารรวม (Gross)</span>
-                    <span>฿{currentSettlement.grossSales.toLocaleString()}</span>
+                    <span>฿{(currentSettlement?.grossSales ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-rose-600">
-                    <span>2. ค่า GP แพลตฟอร์ม ({currentSettlement.config.gpRatePct}%)</span>
-                    <span>-฿{currentSettlement.platformGpAmount.toLocaleString()}</span>
+                    <span>2. ค่า GP แพลตฟอร์ม ({currentSettlement?.config?.gpRatePct ?? 20}%)</span>
+                    <span>-฿{(currentSettlement?.platformGpAmount ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-rose-600">
-                    <span>3. ค่าบริการชำระเงิน MDR ({currentSettlement.config.paymentFeePct}%)</span>
-                    <span>-฿{currentSettlement.paymentProcessingFee.toLocaleString()}</span>
+                    <span>3. ค่าบริการชำระเงิน MDR ({currentSettlement?.config?.paymentFeePct ?? 1.5}%)</span>
+                    <span>-฿{(currentSettlement?.paymentProcessingFee ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-amber-700">
                     <span>4. VAT 7% ของค่าบริการ</span>
-                    <span>-฿{currentSettlement.vatOnFees.toLocaleString()}</span>
+                    <span>-฿{(currentSettlement?.vatOnFees ?? 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-blue-700">
                     <span>5. เครดิต หัก ณ ที่จ่าย 3% (WHT)</span>
-                    <span>+฿{currentSettlement.withholdingTax.toLocaleString()}</span>
+                    <span>+฿{(currentSettlement?.withholdingTax ?? 0).toLocaleString()}</span>
                   </div>
-                  {currentSettlement.cashCollectedByStore > 0 && (
+                  {(currentSettlement?.cashCollectedByStore ?? 0) > 0 && (
                     <div className="flex justify-between text-slate-600">
                       <span>6. หักเงินสดที่ร้านรับเอง (COD/POS)</span>
-                      <span>-฿{currentSettlement.cashCollectedByStore.toLocaleString()}</span>
+                      <span>-฿{(currentSettlement?.cashCollectedByStore ?? 0).toLocaleString()}</span>
                     </div>
                   )}
-                  {currentSettlement.totalTipsReceived !== undefined && (
+                  {currentSettlement?.totalTipsReceived !== undefined && (
                     <div className="flex justify-between text-purple-700 font-semibold pt-1 border-t border-dashed border-slate-200">
                       <span>ทิปพนักงานจัดส่ง (Incentive):</span>
-                      <span>฿{currentSettlement.totalTipsReceived.toLocaleString()}</span>
+                      <span>฿{(currentSettlement?.totalTipsReceived ?? 0).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -2379,7 +2379,7 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <div className="pt-1 flex justify-between items-baseline font-sans">
                   <span className="font-black text-xs text-slate-900">ยอดเงินสุทธิที่โอน:</span>
                   <span className="font-black text-base text-emerald-700">
-                    ฿{currentSettlement.netPayoutPayable.toLocaleString()}
+                    ฿{(currentSettlement?.netPayoutPayable ?? 0).toLocaleString()}
                   </span>
                 </div>
 

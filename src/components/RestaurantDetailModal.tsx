@@ -408,7 +408,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-sm">คะแนนความพึงพอใจโดยรวม</h4>
-                    <p className="text-xs text-slate-500">จากผู้ใช้งานจริง {restaurant.reviewCount.toLocaleString()} ท่าน</p>
+                    <p className="text-xs text-slate-500">จากผู้ใช้งานจริง {(restaurant?.reviewCount ?? 0).toLocaleString()} ท่าน</p>
                     <div className="flex gap-2 mt-1">
                       <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md">
                         ✓ รสชาติดี 98%

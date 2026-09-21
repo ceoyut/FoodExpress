@@ -300,7 +300,7 @@ export const FloatingQuickCart: React.FC = () => {
             {isQuickCartPopupOpen ? 'ปิดป๊อปอัป' : 'ตะกร้าสินค้า'}
           </span>
           <span className="text-sm font-black text-white">
-            ฿{cartSubtotal.toLocaleString()}
+            ฿{(cartSubtotal ?? 0).toLocaleString()}
           </span>
         </div>
 

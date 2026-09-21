@@ -39,20 +39,20 @@ export const SettlementSummaryAlert: React.FC<SettlementSummaryAlertProps> = ({
   const [activeAlertTab, setActiveAlertTab] = useState<'all' | 'goal' | 'payout'>('all');
 
   // Sales goal computation
-  const salesGoal = settlement.config?.dailySalesGoal || settlement.dailySalesGoal || 5000;
-  const currentSales = settlement.grossSales || 0;
+  const salesGoal = settlement?.config?.dailySalesGoal || settlement?.dailySalesGoal || 5000;
+  const currentSales = settlement?.grossSales || 0;
   const isGoalMet = currentSales >= salesGoal;
   const goalProgressPct = salesGoal > 0 ? Math.round((currentSales / salesGoal) * 100) : 100;
   const excessAmount = Math.max(0, currentSales - salesGoal);
   const remainingAmount = Math.max(0, salesGoal - currentSales);
 
   // Pending payout status computation
-  const isPendingPayout = settlement.status !== 'paid';
-  const pendingAmount = settlement.netPayoutPayable || 0;
+  const isPendingPayout = settlement?.status !== 'paid';
+  const pendingAmount = settlement?.netPayoutPayable || 0;
   const isOverThreshold = 
-    settlement.config?.enablePendingPayoutAlert !== false &&
+    settlement?.config?.enablePendingPayoutAlert !== false &&
     isPendingPayout &&
-    pendingAmount >= (settlement.config?.minPendingPayoutThreshold || 5000);
+    pendingAmount >= (settlement?.config?.minPendingPayoutThreshold || 5000);
 
   // Status text in Thai
   const getStatusLabel = () => {
@@ -422,7 +422,7 @@ export const SettlementSummaryAlert: React.FC<SettlementSummaryAlertProps> = ({
                   <div className="flex items-start gap-2 bg-amber-100/70 p-2.5 rounded-xl border border-amber-300 text-amber-950">
                     <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
                     <div className="text-[11px] leading-relaxed">
-                      <strong>แจ้งเตือนข้ามเกณฑ์:</strong> ยอดรอโอน ฿{pendingAmount.toLocaleString()} ข้ามเกณฑ์ขั้นต่ำ ฿{(settlement.config?.minPendingPayoutThreshold || 5000).toLocaleString()} ที่คุณกำหนดไว้ สามารถกดอนุมัติโอนเงินทันทีโดยไม่ต้องรอรอบโอนอัตโนมัติ
+                      <strong>แจ้งเตือนข้ามเกณฑ์:</strong> ยอดรอโอน ฿{pendingAmount.toLocaleString()} ข้ามเกณฑ์ขั้นต่ำ ฿{(settlement?.config?.minPendingPayoutThreshold || 5000).toLocaleString()} ที่คุณกำหนดไว้ สามารถกดอนุมัติโอนเงินทันทีโดยไม่ต้องรอรอบโอนอัตโนมัติ
                     </div>
                   </div>
                 ) : isPendingPayout ? (

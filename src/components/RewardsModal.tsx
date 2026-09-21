@@ -92,7 +92,7 @@ export const RewardsModal: React.FC = () => {
             <div>
               <span className="text-xs text-amber-100 font-medium">คะแนนสะสมคงเหลือ</span>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-3xl sm:text-4xl font-black">{user.loyaltyPoints.toLocaleString()}</span>
+                <span className="text-3xl sm:text-4xl font-black">{(user?.loyaltyPoints ?? 0).toLocaleString()}</span>
                 <span className="text-sm font-semibold text-amber-200">คะแนน (Points)</span>
               </div>
             </div>
