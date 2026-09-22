@@ -12,6 +12,7 @@ import { SupermarketModal } from '../components/SupermarketModal';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
+import { calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
 import { DeliverySlaModal } from '../components/DeliverySlaModal';
 import foodMascotImg from '../assets/images/food_mascot_1789709435278.jpg';
 import messengerImg from '../assets/images/messenger_scooter_1789709446992.jpg';
@@ -91,12 +92,14 @@ export const HomeScreen: React.FC = () => {
 
   // Compute restaurants with real-time calculated distance from user's geolocation
   const processedRestaurants = useMemo(() => {
-    // 1. Calculate real-time distance for all restaurants
+    // 1. Calculate real-time distance and standard rider delivery fee for all restaurants
     const withDistance = RESTAURANTS_DATA.map(rest => {
       const calculatedDistance = getRestaurantDistance(rest, userLocation);
+      const deliveryFee = calculateStandardDeliveryFee(calculatedDistance);
       return {
         ...rest,
         calculatedDistance,
+        deliveryFee,
       };
     });
 
@@ -127,7 +130,7 @@ export const HomeScreen: React.FC = () => {
 
       // Quick filter chips
       if (activeFilter === 'sweet_spot' && rest.calculatedDistance > 5.0) return false;
-      if (activeFilter === 'free_delivery' && rest.deliveryFee > 0) return false;
+      if (activeFilter === 'free_delivery' && rest.calculatedDistance > 3.0) return false;
       if (activeFilter === 'high_rating' && rest.rating < 4.8) return false;
       if (activeFilter === 'fast' && rest.deliveryTimeMinutes > 20) return false;
       if (activeFilter === 'promo' && !rest.promoBadge) return false;

@@ -5,6 +5,7 @@ import { Star, Clock, Bike, Heart, MapPin, Zap } from 'lucide-react';
 import { formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
 import { getDietaryConfig } from '../data/dietaryPreferences';
 import { getDeliverySlaDetails } from '../utils/deliverySla';
+import { calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
 import { DeliverySlaBadge } from './DeliverySlaBadge';
 
 interface RestaurantCardProps {
@@ -30,6 +31,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   // Compute display distance and dynamic delivery time & SLA details
   const effectiveDistance = calculatedDistanceKm !== undefined ? calculatedDistanceKm : restaurant.distanceKm;
   const displayDistance = formatDistance(effectiveDistance);
+  const effectiveDeliveryFee = calculateStandardDeliveryFee(effectiveDistance);
   const slaDetails = getDeliverySlaDetails(effectiveDistance, restaurant.averagePrepTimeMinutes || 15);
   const displayDeliveryTime = slaDetails.totalMinutes;
 
@@ -173,13 +175,12 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
             <span className="text-[11px] text-slate-400">({restaurant.reviewCount.toLocaleString()})</span>
           </div>
 
-          <div className="flex items-center gap-1 text-slate-600 font-medium text-[11px]">
+          <div 
+            className="flex items-center gap-1 text-slate-700 font-semibold text-[11px]"
+            title={`ค่าส่ง ฿${effectiveDeliveryFee} ตามมาตรฐานระยะทางไรเดอร์ (${displayDistance})`}
+          >
             <Bike className="w-3.5 h-3.5 text-emerald-600" />
-            {restaurant.deliveryFee === 0 ? (
-              <span className="text-emerald-600 font-bold">ส่งฟรี</span>
-            ) : (
-              <span>฿{restaurant.deliveryFee}</span>
-            )}
+            <span>฿{effectiveDeliveryFee}</span>
           </div>
         </div>
       </div>

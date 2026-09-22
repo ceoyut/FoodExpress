@@ -199,6 +199,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose }) => {
                 </div>
               ))}
             </div>
+
+            {/* Price & Delivery Fee Breakdown */}
+            <div className="pt-2 border-t border-slate-200/80 space-y-1 text-[11px]">
+              <div className="flex justify-between text-slate-600">
+                <span>ค่าอาหารรวม</span>
+                <span className="font-semibold text-slate-800">฿{cartSubtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span className="flex items-center gap-1">
+                  <span>ค่าจัดส่ง (มาตรฐานระยะทางไรเดอร์)</span>
+                  <span className="text-slate-400">({formatDistance(effectiveDistance)})</span>
+                </span>
+                <span className="font-bold text-slate-800">฿{cartDeliveryFee.toLocaleString()}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-rose-600 font-semibold">
+                  <span>ส่วนลดคูปอง</span>
+                  <span>-฿{discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Payment Method Selector */}

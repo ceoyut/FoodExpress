@@ -43,6 +43,7 @@ import {
 } from '../utils/geolocation';
 import { 
   INITIAL_USER, 
+  DEMO_CUSTOMER_ACCOUNTS,
   RESTAURANTS_DATA, 
   INITIAL_REVIEWS, 
   AVAILABLE_COUPONS, 
@@ -70,7 +71,8 @@ import {
 } from '../data/riderData';
 import { TRANSLATIONS, Language } from '../data/translations';
 import { createCloudOrder, subscribeToOrders } from '../lib/firebase';
-import { calculateThaiRiderFare } from '../utils/riderFareCalculator';
+import { calculateThaiRiderFare, calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
+import { getRestaurantDistance } from '../utils/geolocation';
 import { merchantOrderAudio } from '../utils/merchantOrderAudio';
 
 interface ToastState {
@@ -197,6 +199,7 @@ interface AppContextType {
   // Merchant Social Auth & GP Onboarding
   merchantAccounts: MerchantAccount[];
   activeMerchant: MerchantAccount | null;
+  setActiveMerchant: React.Dispatch<React.SetStateAction<MerchantAccount | null>>;
   loginMerchantAs: (provider: MerchantSocialProvider, restaurantId?: string) => void;
   signupMerchant: (merchantData: Omit<MerchantAccount, 'id' | 'joinedDate'>) => MerchantAccount;
   logoutMerchant: () => void;
@@ -1593,9 +1596,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [orders]);
 
-  // Cart Calculations
+  // Cart Calculations with Standard Thai Rider Distance Fare
   const cartSubtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const cartDeliveryFee = cartRestaurant ? (cartSubtotal > 200 ? 0 : cartRestaurant.deliveryFee) : 0;
+  const cartDistance = cartRestaurant ? (getRestaurantDistance(cartRestaurant, userLocation) || cartRestaurant.distanceKm) : 0;
+  const cartDeliveryFee = cartRestaurant ? calculateStandardDeliveryFee(cartDistance) : 0;
 
   // Add to Cart
   const addToCart = useCallback((
@@ -1735,11 +1739,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [triggerToast]);
 
   const loginAs = useCallback((provider: UserProfile['loginProvider']) => {
-    setUser(prev => ({
-      ...prev,
-      loginProvider: provider,
-    }));
-    triggerToast('เข้าสู่ระบบสำเร็จ', `เชื่อมต่อบัญชีด้วย ${provider.toUpperCase()}`, 'info');
+    const demoProfile = DEMO_CUSTOMER_ACCOUNTS[provider];
+    if (demoProfile) {
+      setUser(demoProfile);
+      triggerToast('เข้าสู่ระบบสำเร็จ! 🎉', `สลับเป็นบัญชี ${demoProfile.name} (${provider.toUpperCase()}) เรียบร้อยแล้ว`, 'success');
+    } else {
+      setUser(prev => ({
+        ...prev,
+        loginProvider: provider,
+      }));
+      triggerToast('เข้าสู่ระบบสำเร็จ', `เชื่อมต่อบัญชีด้วย ${provider.toUpperCase()}`, 'info');
+    }
     setIsAuthModalOpen(false);
   }, [triggerToast]);
 
@@ -1990,7 +2000,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const subtotal = cartItems.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-    const deliveryFee = 25;
+    const deliveryFee = calculateStandardDeliveryFee(restaurant.distanceKm);
     const total = subtotal + deliveryFee;
 
     const newOrder: Order = {
@@ -2066,7 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           rating: 4.8,
           reviewCount: 120,
           deliveryTimeMinutes: order.estimatedDeliveryMinutes || 25,
-          deliveryFee: typeof order.deliveryFee === 'number' ? order.deliveryFee : 20,
+          deliveryFee: typeof order.deliveryFee === 'number' ? order.deliveryFee : calculateStandardDeliveryFee(1.4),
           minOrder: 50,
           distanceKm: 1.4,
           bannerImage: order.restaurantLogo || '',
@@ -2140,9 +2150,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       finalCartItems = deepCopiedItems;
     }
 
-    // 4. Calculate new total and subtotal
+    // 4. Calculate new total and subtotal using standard rider delivery fee
     const newSubtotal = finalCartItems.reduce((sum, itm) => sum + (itm.unitPrice * itm.quantity), 0);
-    const newDeliveryFee = newSubtotal > 200 ? 0 : restaurant.deliveryFee;
+    const reorderDistance = getRestaurantDistance(restaurant, userLocation) || restaurant.distanceKm;
+    const newDeliveryFee = calculateStandardDeliveryFee(reorderDistance);
     const newTotal = newSubtotal + newDeliveryFee;
     const totalQuantityAdded = deepCopiedItems.reduce((sum, itm) => sum + itm.quantity, 0);
 
@@ -2522,6 +2533,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateMerchantBank,
       merchantAccounts,
       activeMerchant,
+      setActiveMerchant,
       loginMerchantAs,
       signupMerchant,
       logoutMerchant,

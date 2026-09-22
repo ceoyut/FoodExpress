@@ -22,6 +22,7 @@ import {
 import { getRestaurantDistance, formatDistance, estimateDeliveryMinutes } from '../utils/geolocation';
 import { getDietaryConfig } from '../data/dietaryPreferences';
 import { getDeliverySlaDetails } from '../utils/deliverySla';
+import { calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
 import { DeliverySlaModal } from './DeliverySlaModal';
 
 interface RestaurantDetailModalProps {
@@ -37,6 +38,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
 
   const effectiveDistance = getRestaurantDistance(restaurant, userLocation);
   const displayDistance = formatDistance(effectiveDistance);
+  const effectiveDeliveryFee = calculateStandardDeliveryFee(effectiveDistance);
   const sla = getDeliverySlaDetails(effectiveDistance, restaurant.averagePrepTimeMinutes || 15);
   const displayDeliveryTime = sla.totalMinutes;
 
@@ -174,11 +176,8 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
 
           <div className="flex items-center gap-1.5 font-medium">
             <Bike className="w-4 h-4 text-emerald-600" />
-            {restaurant.deliveryFee === 0 ? (
-              <span className="text-emerald-600 font-bold">ส่งฟรี 0 บาท</span>
-            ) : (
-              <span className="text-slate-700">ค่าส่ง ฿{restaurant.deliveryFee}</span>
-            )}
+            <span className="text-slate-800 font-bold">ค่าส่ง ฿{effectiveDeliveryFee}</span>
+            <span className="text-[10px] text-slate-500 font-normal">(มาตรฐานไรเดอร์)</span>
           </div>
         </div>
 
@@ -510,7 +509,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">เงื่อนไขการจัดส่งและชำระเงิน</h4>
                   <p className="text-slate-600 mt-0.5">
-                    สั่งขั้นต่ำ ฿{restaurant.minOrder} • รองรับชำระผ่านบัตรเครดิต, FoodExpress Wallet, และ QR PromptPay
+                    ค่าส่งตามมาตรฐานระยะทางไรเดอร์ (฿{effectiveDeliveryFee} สำหรับระยะ {displayDistance}) • สั่งขั้นต่ำ ฿{restaurant.minOrder} • รองรับชำระผ่านบัตรเครดิต, FoodExpress Wallet, และ QR PromptPay
                   </p>
                 </div>
               </div>

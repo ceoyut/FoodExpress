@@ -211,6 +211,21 @@ export function calculateThaiRiderFare(options: CalculateRiderFareOptions): Thai
 }
 
 /**
+ * คำนวณค่าจัดส่งตามมาตรฐานระยะทางจริงของไรเดอร์ (Thai Rider Standard Distance-Based Delivery Fee)
+ * เกณฑ์มาตรฐาน:
+ * - 0 - 3.0 กม. แรก: ฿40.00
+ * - 3.1 - 10.0 กม.: +฿9.00 / กม.
+ * - เกิน 10.0 กม. ขึ้นไป: +฿13.00 / กม.
+ */
+export function calculateStandardDeliveryFee(
+  distanceKm: number,
+  zoneType: 'bkk_metro' | 'bkk_cbd' | 'provincial' = 'bkk_metro'
+): number {
+  const result = calculateThaiRiderFare({ distanceKm, zoneType });
+  return Math.round(result.baseFare + result.totalDistanceFee);
+}
+
+/**
  * เปรียบเทียบข้อมูลมาตรฐานค่ารอบของแพลตฟอร์มในประเทศไทย
  */
 export const THAI_PLATFORMS_BENCHMARK = [

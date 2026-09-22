@@ -69,10 +69,10 @@ export const RoleSwitcherBar: React.FC = () => {
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
               }`}
-              title="สลับเป็นผู้ใช้: สมชาย สายใจ (ลูกค้า)"
+              title={`สลับเป็นผู้ใช้: ${user.name} (ลูกค้า)`}
             >
               <User className="w-3 h-3 text-emerald-300" />
-              <span>สมชาย (ลูกค้า)</span>
+              <span>{user.name.split(' ')[0]} (ลูกค้า)</span>
             </button>
 
             {/* Merchant Button */}

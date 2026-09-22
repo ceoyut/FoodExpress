@@ -107,10 +107,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   );
 
   const socialProviders = [
-    { id: 'google', name: 'Google Workspace', icon: '🌐', color: 'border-slate-300 hover:bg-slate-50' },
-    { id: 'line', name: 'LINE Account', icon: '🟢', color: 'border-emerald-300 hover:bg-emerald-50 text-emerald-700' },
-    { id: 'apple', name: 'Apple ID', icon: '🍏', color: 'border-slate-800 bg-slate-900 text-white' },
-    { id: 'facebook', name: 'Facebook', icon: '🔵', color: 'border-blue-300 hover:bg-blue-50 text-blue-700' },
+    { 
+      id: 'google', 
+      name: 'Google Workspace', 
+      userName: 'สมชาย สายใจ', 
+      tier: 'Gold', 
+      wallet: '฿1,500', 
+      icon: '🌐', 
+      color: 'border-slate-300 hover:bg-slate-50' 
+    },
+    { 
+      id: 'line', 
+      name: 'LINE Account', 
+      userName: 'ณิชา สุขเกษม', 
+      tier: 'Platinum VIP', 
+      wallet: '฿3,850', 
+      icon: '🟢', 
+      color: 'border-emerald-300 hover:bg-emerald-50 text-emerald-800' 
+    },
+    { 
+      id: 'apple', 
+      name: 'Apple ID', 
+      userName: 'ธนกฤต เทวกุล', 
+      tier: 'Silver', 
+      wallet: '฿850', 
+      icon: '🍏', 
+      color: 'border-slate-800 bg-slate-900 text-white' 
+    },
+    { 
+      id: 'facebook', 
+      name: 'Facebook', 
+      userName: 'มยุรี รัตนพร', 
+      tier: 'Bronze', 
+      wallet: '฿300', 
+      icon: '🔵', 
+      color: 'border-blue-300 hover:bg-blue-50 text-blue-700' 
+    },
   ];
 
   return (
@@ -260,22 +292,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {socialProviders.map(p => (
                   <button
                     key={p.id}
+                    id={`login-as-${p.id}-btn`}
                     onClick={() => loginAs(p.id as any)}
-                    className={`p-3 rounded-2xl border flex items-center justify-between transition-all active:scale-98 ${p.color} ${
-                      user.loginProvider === p.id ? 'ring-2 ring-emerald-500 shadow-sm' : ''
+                    className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${p.color} ${
+                      user.loginProvider === p.id ? 'ring-2 ring-emerald-500 shadow-sm bg-emerald-50/30' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{p.icon}</span>
-                      <span className="font-semibold text-xs">{p.name}</span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-xl shrink-0">{p.icon}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs truncate flex items-center gap-1.5">
+                          <span>{p.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200/80 font-medium text-slate-700">
+                            {p.tier}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-medium text-slate-600 truncate mt-0.5">
+                          {p.userName}
+                        </div>
+                        <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                          วอลเล็ต {p.wallet}
+                        </div>
+                      </div>
                     </div>
                     {user.loginProvider === p.id && (
-                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
-                        เชื่อมต่ออยู่
+                      <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0 ml-1.5">
+                        กำลังใช้งาน
                       </span>
                     )}
                   </button>

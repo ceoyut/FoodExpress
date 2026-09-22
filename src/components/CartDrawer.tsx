@@ -415,16 +415,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onClose, onProceedToChec
             <span>฿{(cartSubtotal ?? 0).toLocaleString()}</span>
           </div>
 
-          <div className="flex justify-between text-slate-600">
+          <div className="flex justify-between text-slate-700">
             <span className="flex items-center gap-1">
-              <span>ค่าจัดส่ง</span>
-              <span className="text-slate-400">({formatDistance(effectiveDistance)} • ~{sla.totalMinutes} นาที)</span>
+              <span>ค่าจัดส่ง (มาตรฐานระยะทางไรเดอร์)</span>
+              <span className="text-slate-400 font-normal">({formatDistance(effectiveDistance)} • ~{sla.totalMinutes} นาที)</span>
             </span>
-            {cartDeliveryFee === 0 ? (
-              <span className="text-emerald-600 font-bold">ฟรีค่าจัดส่ง</span>
-            ) : (
-              <span>฿{cartDeliveryFee}</span>
-            )}
+            <span className="font-bold text-slate-800">฿{cartDeliveryFee}</span>
           </div>
 
           {/* SLA Delivery Guarantee Badge in Cart */}

@@ -2,6 +2,8 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { RESTAURANTS_DATA } from '../data/mockData';
 import { Heart, X, Star, Clock, Bike, ArrowRight, Sparkles } from 'lucide-react';
+import { getRestaurantDistance } from '../utils/geolocation';
+import { calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
 
 interface FavoritesModalProps {
   onClose: () => void;
@@ -68,9 +70,9 @@ export const FavoritesModal: React.FC<FavoritesModalProps> = ({ onClose }) => {
                     <Clock className="w-3 h-3 text-slate-400" />
                     <span>{restaurant.deliveryTimeMinutes} นาที</span>
                   </span>
-                  <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                  <span className="flex items-center gap-1 text-emerald-700 font-semibold">
                     <Bike className="w-3 h-3" />
-                    <span>{restaurant.deliveryFee === 0 ? 'ส่งฟรี' : `฿${restaurant.deliveryFee}`}</span>
+                    <span>ค่าส่ง ฿{calculateStandardDeliveryFee(getRestaurantDistance(restaurant, userLocation))}</span>
                   </span>
                 </div>
               </div>

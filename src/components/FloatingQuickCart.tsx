@@ -237,7 +237,7 @@ export const FloatingQuickCart: React.FC = () => {
             <div className="flex items-center justify-between text-[11px] text-slate-500">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3 text-emerald-600" />
-                <span>ค่าส่ง: {cartDeliveryFee === 0 ? 'ฟรีค่าจัดส่ง' : `฿${cartDeliveryFee}`}</span>
+                <span>ค่าส่ง: ฿{cartDeliveryFee} (มาตรฐานไรเดอร์)</span>
               </span>
               <button
                 id="quick-cart-clear-btn"
