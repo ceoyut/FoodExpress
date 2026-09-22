@@ -72,17 +72,19 @@ const AppContent: React.FC = () => {
     }
   }, [setActiveMerchant, setSelectedSettlementRestId, setActiveRider, setActiveTab]);
 
+  const isCustomerScreen = activeTab === 'home' || activeTab === 'orders' || activeTab === 'rewards' || activeTab === 'profile';
+
   return (
     <DeviceFrame>
       <div className="flex flex-col h-full bg-[#F6F8F7] font-sans relative">
         {/* Quick Role Switcher for testing (Customer / Merchant / Rider) */}
         <RoleSwitcherBar />
 
-        {/* Fixed Header (on non-home screens) */}
-        {activeTab !== 'home' && <Header />}
+        {/* Fixed Header (for customer sub-screens only: orders, rewards, profile) */}
+        {isCustomerScreen && activeTab !== 'home' && <Header />}
 
         {/* Scrollable Main Area */}
-        <main className="flex-1 overflow-y-auto pb-24 no-scrollbar">
+        <main className={`flex-1 overflow-y-auto no-scrollbar ${isCustomerScreen ? 'pb-24' : 'pb-6'}`}>
           {activeTab === 'home' && <HomeScreen />}
           {activeTab === 'orders' && <OrdersScreen />}
           {activeTab === 'rewards' && <RewardsModal />}
@@ -92,11 +94,11 @@ const AppContent: React.FC = () => {
           {activeTab === 'profile' && <HomeScreen />}
         </main>
 
-        {/* Bottom Floating Navigation */}
-        <BottomNavigation />
+        {/* Bottom Floating Navigation (Customer only) */}
+        {isCustomerScreen && <BottomNavigation />}
 
-        {/* Floating Quick Cart Pop-up Widget */}
-        <FloatingQuickCart />
+        {/* Floating Quick Cart Pop-up Widget (Customer only) */}
+        {isCustomerScreen && <FloatingQuickCart />}
 
         {/* Floating Modals & Drawers */}
         {selectedRestaurant && (

@@ -31,7 +31,8 @@ import {
   MerchantGpTier,
   AdminRole,
   PlatformSystemConfig,
-  AdminDisputeTicket
+  AdminDisputeTicket,
+  MerchantStaffRole
 } from '../types';
 import {
   INITIAL_PLATFORM_CONFIG,
@@ -208,6 +209,17 @@ interface AppContextType {
   isGpCalculatorOpen: boolean;
   setIsGpCalculatorOpen: (open: boolean) => void;
 
+  // Merchant Restaurant Menu & Staff RBAC System
+  merchantStaffRole: MerchantStaffRole;
+  setMerchantStaffRole: (role: MerchantStaffRole) => void;
+  restaurantList: Restaurant[];
+  toggleMenuItemStock: (restaurantId: string, menuItemId: string) => void;
+  toggleMenuItemAvailability: (restaurantId: string, menuItemId: string) => void;
+  updateMenuItem: (restaurantId: string, item: MenuItem) => void;
+  addMenuItemToRestaurant: (restaurantId: string, item: Omit<MenuItem, 'id'>) => MenuItem;
+  deleteMenuItemFromRestaurant: (restaurantId: string, menuItemId: string) => void;
+  updateRestaurantOperationalStatus: (restaurantId: string, isOpen: boolean, prepTimeMinutes?: number) => void;
+
   // Rider Management Systems (Registration, Queue, Payout)
   activeRider: ActiveRiderAccount;
   setActiveRider: React.Dispatch<React.SetStateAction<ActiveRiderAccount>>;
@@ -292,6 +304,8 @@ const STORAGE_KEYS = {
   MERCHANT_SETTLEMENTS: 'foodexpress_merchant_settlements_v2',
   MERCHANT_ACCOUNTS: 'foodexpress_merchant_accounts_v2',
   ACTIVE_MERCHANT: 'foodexpress_active_merchant_v2',
+  RESTAURANTS: 'foodexpress_restaurants_v2',
+  MERCHANT_STAFF_ROLE: 'foodexpress_merchant_staff_role_v2',
   RIDER_ACCOUNT: 'foodexpress_rider_account_v2',
   RIDER_APPLICATIONS: 'foodexpress_rider_apps_v2',
   RIDER_QUEUE: 'foodexpress_rider_queue_v2',
@@ -793,6 +807,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logoutMerchant = useCallback(() => {
     setActiveMerchant(null);
   }, []);
+
+  // =========================================================================
+  // MERCHANT RESTAURANT MENU MANAGEMENT & RBAC STAFF SYSTEM
+  // =========================================================================
+  const [restaurantList, setRestaurantList] = useState<Restaurant[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.RESTAURANTS);
+      return saved ? JSON.parse(saved) : RESTAURANTS_DATA;
+    } catch {
+      return RESTAURANTS_DATA;
+    }
+  });
+
+  const [merchantStaffRole, setMerchantStaffRole] = useState<MerchantStaffRole>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.MERCHANT_STAFF_ROLE);
+      return (saved as MerchantStaffRole) || 'owner';
+    } catch {
+      return 'owner';
+    }
+  });
+
+  const toggleMenuItemStock = useCallback((restaurantId: string, menuItemId: string) => {
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        const updatedMenu = rest.menu.map(item => {
+          if (item.id !== menuItemId) return item;
+          const nextStock = item.inStockToday === false ? true : false;
+          triggerToast(
+            nextStock ? 'เปิดขายเมนูแล้ว 🍲' : 'ปิดจำหน่ายชั่วคราว ⚠️',
+            `ร้าน "${rest.name}": เมนู "${item.name}" ปรับสถานะเป็น [${nextStock ? 'พร้อมจำหน่าย' : 'ของหมดวันนี้'}] เรียบร้อย`,
+            nextStock ? 'success' : 'info'
+          );
+          return {
+            ...item,
+            inStockToday: nextStock,
+          };
+        });
+        return { ...rest, menu: updatedMenu };
+      });
+    });
+  }, [triggerToast]);
+
+  const toggleMenuItemAvailability = useCallback((restaurantId: string, menuItemId: string) => {
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        const updatedMenu = rest.menu.map(item => {
+          if (item.id !== menuItemId) return item;
+          const nextAvail = item.isAvailable === false ? true : false;
+          triggerToast(
+            nextAvail ? 'เปิดการขายเมนูแล้ว' : 'ปิดการขายเมนูแล้ว',
+            `เมนู "${item.name}" ${nextAvail ? 'เปิดแสดงในหน้าร้านแล้ว' : 'ซ่อนจากหน้าร้านแล้ว'}`,
+            'info'
+          );
+          return { ...item, isAvailable: nextAvail };
+        });
+        return { ...rest, menu: updatedMenu };
+      });
+    });
+  }, [triggerToast]);
+
+  const updateMenuItem = useCallback((restaurantId: string, updatedItem: MenuItem) => {
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        const updatedMenu = rest.menu.map(item => item.id === updatedItem.id ? updatedItem : item);
+        return { ...rest, menu: updatedMenu };
+      });
+    });
+    triggerToast('บันทึกเมนูสำเร็จ ✅', `อัปเดตข้อมูลเมนู "${updatedItem.name}" เรียบร้อยแล้ว`, 'success');
+  }, [triggerToast]);
+
+  const addMenuItemToRestaurant = useCallback((restaurantId: string, itemData: Omit<MenuItem, 'id'>): MenuItem => {
+    const newItem: MenuItem = {
+      ...itemData,
+      id: `${restaurantId}_m_${Date.now()}`,
+      restaurantId,
+      inStockToday: true,
+      isAvailable: true,
+      soldCountToday: 0
+    };
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        return { ...rest, menu: [newItem, ...rest.menu] };
+      });
+    });
+    triggerToast('เพิ่มเมนูใหม่สำเร็จ 🥘', `เพิ่มเมนู "${newItem.name}" ในร้านค้าเรียบร้อยแล้ว`, 'success');
+    return newItem;
+  }, [triggerToast]);
+
+  const deleteMenuItemFromRestaurant = useCallback((restaurantId: string, menuItemId: string) => {
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        const filteredMenu = rest.menu.filter(item => item.id !== menuItemId);
+        return { ...rest, menu: filteredMenu };
+      });
+    });
+    triggerToast('ลบเมนูเรียบร้อย', 'นำเมนูออกจากรายการอาหารของร้านแล้ว', 'info');
+  }, [triggerToast]);
+
+  const updateRestaurantOperationalStatus = useCallback((restaurantId: string, isOpen: boolean, prepTimeMinutes?: number) => {
+    setRestaurantList(prev => {
+      return prev.map(rest => {
+        if (rest.id !== restaurantId) return rest;
+        return {
+          ...rest,
+          isOpen,
+          averagePrepTimeMinutes: prepTimeMinutes !== undefined ? prepTimeMinutes : rest.averagePrepTimeMinutes
+        };
+      });
+    });
+    triggerToast(
+      isOpen ? 'เปิดรับออเดอร์แล้ว 🟢' : 'ปิดรับออเดอร์ชั่วคราว 🔴',
+      isOpen ? 'ร้านพร้อมรับคำสั่งซื้อจากลูกค้า' : 'ร้านอยู่ในสถานะปิดรับออเดอร์ชั่วคราว (ครัวติดขัด)',
+      'info'
+    );
+  }, [triggerToast]);
 
   // =========================================================================
   // RIDER MANAGEMENT STATE & LOGIC
@@ -1571,6 +1706,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
       localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(coupons));
       localStorage.setItem(STORAGE_KEYS.NOTIFS, JSON.stringify(notifications));
+      localStorage.setItem(STORAGE_KEYS.RESTAURANTS, JSON.stringify(restaurantList));
+      localStorage.setItem(STORAGE_KEYS.MERCHANT_STAFF_ROLE, merchantStaffRole);
     } catch (e) {
       console.error('Storage write error', e);
     }
@@ -2541,6 +2678,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsMerchantAuthModalOpen,
       isGpCalculatorOpen,
       setIsGpCalculatorOpen,
+      // Merchant Menu & Staff RBAC
+      merchantStaffRole,
+      setMerchantStaffRole,
+      restaurantList,
+      toggleMenuItemStock,
+      toggleMenuItemAvailability,
+      updateMenuItem,
+      addMenuItemToRestaurant,
+      deleteMenuItemFromRestaurant,
+      updateRestaurantOperationalStatus,
       // Rider Hub
       activeRider,
       setActiveRider,

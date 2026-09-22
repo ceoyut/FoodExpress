@@ -24,7 +24,11 @@ import {
   XCircle, 
   Play,
   Calculator,
-  Info
+  Info,
+  Camera,
+  MessageSquare,
+  ShieldAlert,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export const RiderQueueTab: React.FC = () => {
@@ -41,8 +45,15 @@ export const RiderQueueTab: React.FC = () => {
     activeDeliveringTrip, 
     deliveryStepIndex, 
     advanceDeliveringStep, 
-    triggerSimulatedIncomingOrder 
+    triggerSimulatedIncomingOrder,
+    triggerToast
   } = useApp();
+
+  // Proof of Delivery (POD) states
+  const [podMethod, setPodMethod] = useState<'door_drop' | 'hand_over' | 'lobby_security'>('door_drop');
+  const [podPhotoUploaded, setPodPhotoUploaded] = useState<boolean>(true);
+  const [podNote, setPodNote] = useState<string>('วางบนโต๊ะหน้าประตูห้องเรียบร้อย');
+  const [quickChatSent, setQuickChatSent] = useState<boolean>(false);
 
   // Incoming offer countdown timer (20 seconds)
   const [countdownSeconds, setCountdownSeconds] = useState<number>(20);
@@ -275,7 +286,7 @@ export const RiderQueueTab: React.FC = () => {
             )}
 
             {deliveryStepIndex === 1 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
                     <User className="w-5 h-5 text-blue-600" />
@@ -297,8 +308,95 @@ export const RiderQueueTab: React.FC = () => {
                   </a>
                 </div>
 
+                {/* Quick Chat Messaging */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickChatSent(true);
+                      triggerToast('ส่งข้อความถึงลูกค้าแล้ว 💬', 'ส่งข้อความด่วน: "กำลังนำอาหารไปส่งให้อย่างปลอดภัยครับ"', 'info');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                  >
+                    <MessageSquare className="w-3 h-3 text-slate-500" />
+                    <span>🛵 กำลังนำไปส่งครับ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuickChatSent(true);
+                      triggerToast('ส่งข้อความถึงลูกค้าแล้ว 💬', 'ส่งข้อความด่วน: "ถึงหน้าบ้าน/คอนโดแล้วครับ"', 'info');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                  >
+                    <MessageSquare className="w-3 h-3 text-slate-500" />
+                    <span>📍 ถึงหน้าบ้านแล้วครับ</span>
+                  </button>
+                </div>
+
                 <div className="text-[11px] text-slate-700 bg-white p-2.5 rounded-lg border border-slate-100">
                   <strong>โน้ตการจัดส่ง:</strong> วางไว้หน้าประตูห้อง หรือโทรแจ้งเมื่อถึงด้านล่างอาคาร
+                </div>
+
+                {/* Proof of Delivery (POD) Drop-off Selector */}
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-emerald-600" />
+                      <span>หลักฐานการส่งมอบ (Proof of Delivery / POD)</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      มาตรฐานความปลอดภัย
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPodMethod('door_drop')}
+                      className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                        podMethod === 'door_drop'
+                          ? 'border-emerald-500 bg-white text-emerald-800 font-bold shadow-2xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      <span className="text-[11px] block">🚪 วางหน้าประตู</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPodMethod('hand_over')}
+                      className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                        podMethod === 'hand_over'
+                          ? 'border-emerald-500 bg-white text-emerald-800 font-bold shadow-2xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      <span className="text-[11px] block">🤝 ส่งถึงมือ</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPodMethod('lobby_security')}
+                      className={`py-1.5 px-2 rounded-lg border text-center transition-all cursor-pointer ${
+                        podMethod === 'lobby_security'
+                          ? 'border-emerald-500 bg-white text-emerald-800 font-bold shadow-2xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-white'
+                      }`}
+                    >
+                      <span className="text-[11px] block">🏢 ฝาก รปภ./นิติ</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPodPhotoUploaded(true);
+                      triggerToast('ถ่ายภาพสำเร็จ! 📸', 'บันทึกภาพถ่ายจุดวางอาหาร (Proof of Delivery) เข้าระบบคลาวด์แล้ว', 'success');
+                    }}
+                    className="w-full py-2 rounded-lg bg-white border border-dashed border-emerald-400 hover:bg-emerald-50/50 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{podPhotoUploaded ? '✓ ถ่ายภาพจุดส่งมอบเรียบร้อย (กดเพื่อถ่ายใหม่)' : 'กดเพื่อถ่ายภาพจุดส่งมอบอาหาร (POD)'}</span>
+                  </button>
                 </div>
 
                 <button
@@ -307,7 +405,7 @@ export const RiderQueueTab: React.FC = () => {
                   className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold cursor-pointer transition-colors shadow-xs flex items-center justify-center gap-2"
                 >
                   <Navigation className="w-4 h-4" />
-                  <span>ถึงจุดส่งมอบลูกค้าเรียบร้อยแล้ว 📍</span>
+                  <span>ยืนยันส่งมอบอาหารสำเร็จ (บันทึก POD & จบงาน) 📍</span>
                 </button>
               </div>
             )}
@@ -320,6 +418,17 @@ export const RiderQueueTab: React.FC = () => {
                   <p className="text-xs text-slate-500">
                     ลูกค้ายืนยันการรับอาหาร ยอดเงินค่ารอบพร้อมทิปจะถูกโอนเข้ากระเป๋าวอลเล็ตทันที
                   </p>
+                </div>
+
+                {/* POD Verified Badge */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
+                  <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>บันทึกภาพหลักฐานส่งมอบ (POD Verified)</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                    {podMethod === 'door_drop' ? '🚪 วางหน้าประตูห้อง' : podMethod === 'lobby_security' ? '🏢 ฝาก รปภ./นิติ' : '🤝 ส่งมอบถึงมือ'}
+                  </span>
                 </div>
 
                 <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">

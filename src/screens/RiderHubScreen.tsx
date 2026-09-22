@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext';
 import { RiderRegistrationTab } from '../components/rider/RiderRegistrationTab';
 import { RiderQueueTab } from '../components/rider/RiderQueueTab';
 import { RiderPayoutTab } from '../components/rider/RiderPayoutTab';
+import { RiderHeatmapTab } from '../components/rider/RiderHeatmapTab';
+import { RiderSafetyTab } from '../components/rider/RiderSafetyTab';
 import { 
   Bike, 
   UserPlus, 
@@ -12,7 +14,10 @@ import {
   ArrowLeft, 
   ShieldCheck, 
   PhoneCall,
-  Bell
+  Bell,
+  Flame,
+  ShieldAlert,
+  Layers
 } from 'lucide-react';
 
 export const RiderHubScreen: React.FC = () => {
@@ -23,7 +28,7 @@ export const RiderHubScreen: React.FC = () => {
     triggerSimulatedIncomingOrder
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'queue' | 'registration' | 'payout'>('queue');
+  const [activeSubTab, setActiveSubTab] = useState<'queue' | 'heatmap' | 'payout' | 'safety' | 'registration'>('queue');
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-20">
@@ -35,7 +40,7 @@ export const RiderHubScreen: React.FC = () => {
               id="rider-hub-back-home-btn"
               onClick={() => setActiveTab('home')}
               className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="กลับหน้าหลัก"
+              title="กลับหน้าหลักลูกค้า"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -50,11 +55,11 @@ export const RiderHubScreen: React.FC = () => {
                     FoodExpress Rider Hub
                   </h1>
                   <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                    ศูนย์ปฏิบัติการไรเดอร์
+                    ศูนย์ปฏิบัติการไรเดอร์สากล
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  ระบบสมัครงาน • ระบบคิวรับออเดอร์ • ระบบจ่ายเงินค่ารอบ
+                  รับงานสด • ฮอตสปอตงานพ่วง • กระเป๋าเงินคู่ • ช่วยเหลือฉุกเฉิน SOS • เอกสารคนขับ
                 </p>
               </div>
             </div>
@@ -81,49 +86,75 @@ export const RiderHubScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 3 Core System Navigation Tabs */}
+        {/* 5 Core System Navigation Tabs */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center gap-2 border-t border-slate-100 pt-2 pb-2 overflow-x-auto">
+          <div className="flex items-center gap-1.5 border-t border-slate-100 pt-2 pb-2 overflow-x-auto">
             <button
               id="rider-tab-queue-btn"
               onClick={() => setActiveSubTab('queue')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeSubTab === 'queue'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <ListOrdered className="w-4 h-4" />
-              <span>ระบบคิว & เข้ารับออเดอร์</span>
+              <span>1. คิว & รับงานสด</span>
               {activeIncomingTrip && (
                 <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
               )}
             </button>
 
             <button
-              id="rider-tab-registration-btn"
-              onClick={() => setActiveSubTab('registration')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
-                activeSubTab === 'registration'
+              id="rider-tab-heatmap-btn"
+              onClick={() => setActiveSubTab('heatmap')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeSubTab === 'heatmap'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              <UserPlus className="w-4 h-4" />
-              <span>ระบบสมัครพนักงานจัดส่ง</span>
+              <Flame className="w-4 h-4 text-amber-500" />
+              <span>2. แผนที่ฮอตสปอต & งานพ่วง</span>
             </button>
 
             <button
               id="rider-tab-payout-btn"
               onClick={() => setActiveSubTab('payout')}
-              className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeSubTab === 'payout'
                   ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <CreditCard className="w-4 h-4" />
-              <span>ระบบจ่ายเงิน & สลิปค่ารอบ</span>
+              <span>3. กระเป๋าเงินคู่ & ถอนเงิน</span>
+            </button>
+
+            <button
+              id="rider-tab-safety-btn"
+              onClick={() => setActiveSubTab('safety')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeSubTab === 'safety'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-500 group-hover:text-rose-600" />
+              <span>4. ความปลอดภัย & SOS</span>
+            </button>
+
+            <button
+              id="rider-tab-registration-btn"
+              onClick={() => setActiveSubTab('registration')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                activeSubTab === 'registration'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>5. ข้อมูลคนขับ & ตรวจเอกสาร</span>
             </button>
           </div>
         </div>
@@ -132,8 +163,10 @@ export const RiderHubScreen: React.FC = () => {
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {activeSubTab === 'queue' && <RiderQueueTab />}
-        {activeSubTab === 'registration' && <RiderRegistrationTab />}
+        {activeSubTab === 'heatmap' && <RiderHeatmapTab />}
         {activeSubTab === 'payout' && <RiderPayoutTab />}
+        {activeSubTab === 'safety' && <RiderSafetyTab />}
+        {activeSubTab === 'registration' && <RiderRegistrationTab />}
       </main>
     </div>
   );

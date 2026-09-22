@@ -84,10 +84,10 @@ export const RoleSwitcherBar: React.FC = () => {
                   ? 'bg-amber-600 text-white shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
               }`}
-              title="สลับเป็นร้านค้า: กานดา ร้อยหม้อ (Merchant POS)"
+              title={`สลับเป็นร้านค้า: ${activeMerchant?.restaurantName || 'กานดา ร้อยหม้อ'} (Merchant POS)`}
             >
               <Store className="w-3 h-3 text-amber-300" />
-              <span>กานดา (ร้านค้า)</span>
+              <span>{activeMerchant ? `${activeMerchant.restaurantName.split(' ')[0]} (ร้านค้า)` : 'ร้านค้า (POS)'}</span>
             </button>
 
             {/* Rider Button */}

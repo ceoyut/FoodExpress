@@ -30,13 +30,17 @@ export const RiderPayoutTab: React.FC = () => {
     activeRider, 
     riderEarningsHistory, 
     riderPayoutSlips, 
-    withdrawRiderEarnings 
+    withdrawRiderEarnings,
+    triggerToast
   } = useApp();
 
   const [activeHistoryView, setActiveHistoryView] = useState<'trips' | 'payouts'>('trips');
   const [selectedSlip, setSelectedSlip] = useState<RiderPayoutSlip | null>(null);
   const [isStandardsModalOpen, setIsStandardsModalOpen] = useState<boolean>(false);
   const [selectedTripDistance, setSelectedTripDistance] = useState<number>(3.5);
+
+  // Dual Wallet State
+  const [creditWalletBalance, setCreditWalletBalance] = useState<number>(650);
 
   // Cash-out dialog state
   const [withdrawAmount, setWithdrawAmount] = useState<string>('');
@@ -82,6 +86,95 @@ export const RiderPayoutTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* DUAL WALLET OVERVIEW (CASH WALLET VS CREDIT WALLET) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">👛</span>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 leading-tight">
+                ระบบกระเป๋าเงินแยก 2 ประเภท (Dual Wallet Standard)
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                แยกชัดเจนระหว่างเงินสดรายได้ที่ถอนได้ กับเครดิตรับงานเก็บเงินสดปลายทาง (COD)
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-extrabold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full self-start sm:self-center">
+            มาตรฐานอุตสาหกรรม Food Delivery
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cash Wallet */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <span>1. Cash Wallet (กระเป๋าเงินสด / ถอนได้ทันที)</span>
+              </span>
+              <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-md">
+                พร้อมถอน
+              </span>
+            </div>
+            <div className="my-3">
+              <div className="text-2xl font-black text-emerald-950">
+                ฿{activeRider.walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-emerald-800 mt-0.5">
+                รวมค่ารอบ + ค่าระยะทาง + ทิปจากลูกค้า 100% เต็ม ไม่หักหัวคิว
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-emerald-200/50">
+              <button
+                type="button"
+                onClick={handleWithdrawAll}
+                disabled={activeRider.walletBalance <= 0}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>ถอนเข้าธนาคาร</span>
+              </button>
+              <span className="text-[10px] text-emerald-700">ฟรีค่าธรรมเนียม ตลอด 24 ชม.</span>
+            </div>
+          </div>
+
+          {/* Credit Wallet */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4 text-blue-600" />
+                <span>2. Credit Wallet (กระเป๋าเครดิตรับงาน COD)</span>
+              </span>
+              <span className="text-[10px] font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
+                เครดิตรับงาน
+              </span>
+            </div>
+            <div className="my-3">
+              <div className="text-2xl font-black text-blue-950">
+                ฿{creditWalletBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-blue-800 mt-0.5">
+                สำหรับรับออเดอร์เงินสด (COD) เมื่อรับเงินจากลูกค้า ระบบจะหักเครดิตตามค่าอาหารโดยอัตโนมัติ
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-blue-200/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreditWalletBalance(prev => prev + 200);
+                  triggerToast('เติมเครดิตสำเร็จ! 💳', 'เติมเงินเข้า Credit Wallet +฿200.00 สำหรับรับงานเงินสดปลายทางแล้ว', 'success');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <span>+ เติมเครดิต ฿200</span>
+              </button>
+              <span className="text-[10px] text-blue-700">แนะนำรักษายอดขั้นต่ำ ฿300</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. FINANCIAL SUMMARY KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Wallet Balance Card */}

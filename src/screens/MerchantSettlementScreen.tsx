@@ -41,7 +41,10 @@ import {
   LogIn,
   UserPlus,
   LogOut,
-  Trophy
+  Trophy,
+  UtensilsCrossed,
+  ChefHat,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RESTAURANTS_DATA } from '../data/mockData';
@@ -55,6 +58,9 @@ import { NewOrderAlertModal } from '../components/NewOrderAlertModal';
 import { MerchantOrderAlertControlBar } from '../components/MerchantOrderAlertControlBar';
 import { merchantOrderAudio } from '../utils/merchantOrderAudio';
 import { SettlementAutomationBar } from '../components/merchant/SettlementAutomationBar';
+import { MerchantMenuManagement } from '../components/merchant/MerchantMenuManagement';
+import { MerchantStaffRbacTab } from '../components/merchant/MerchantStaffRbacTab';
+import { MerchantKitchenOrdersTab } from '../components/merchant/MerchantKitchenOrdersTab';
 import { Order } from '../types';
 
 export const MerchantSettlementScreen: React.FC = () => {
@@ -79,8 +85,19 @@ export const MerchantSettlementScreen: React.FC = () => {
     setIsGpCalculatorOpen,
     setActiveTab,
     triggerToast,
-    addNotification
+    addNotification,
+    merchantStaffRole,
+    setMerchantStaffRole
   } = useApp();
+
+  const [activeMerchantSubTab, setActiveMerchantSubTab] = useState<'menu' | 'orders' | 'settlement' | 'rbac'>('menu');
+
+  // Enforce store isolation: if logged in as a specific merchant, lock to their restaurant ID
+  useEffect(() => {
+    if (activeMerchant && activeMerchant.restaurantId && selectedSettlementRestId !== activeMerchant.restaurantId) {
+      setSelectedSettlementRestId(activeMerchant.restaurantId);
+    }
+  }, [activeMerchant, selectedSettlementRestId, setSelectedSettlementRestId]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<string>('all');
@@ -850,6 +867,20 @@ export const MerchantSettlementScreen: React.FC = () => {
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>สมัครร้านใหม่</span>
               </button>
+
+              <button
+                id="merchant-banner-logout-btn"
+                onClick={() => {
+                  logoutMerchant();
+                  setActiveTab('home');
+                  triggerToast('ออกจากระบบร้านค้า', 'กลับสู่หน้าสั่งอาหารของลูกค้าเรียบร้อยแล้ว', 'info');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold text-xs flex items-center gap-1.5 border border-rose-400/30 cursor-pointer"
+                title="ออกจากระบบร้านค้าและกลับสู่หน้าลูกค้า"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>ออกจากระบบร้าน</span>
+              </button>
             </div>
           </div>
         </div>
@@ -870,6 +901,12 @@ export const MerchantSettlementScreen: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => setActiveTab('home')}
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 cursor-pointer"
+            >
+              กลับหน้าลูกค้า
+            </button>
+            <button
               onClick={() => setIsMerchantAuthModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-white text-emerald-950 font-black text-xs hover:bg-emerald-50 shadow-xs cursor-pointer"
             >
@@ -885,11 +922,125 @@ export const MerchantSettlementScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Settlement Automation & Merchant KYC Verification Bar */}
-      <SettlementAutomationBar 
-        restaurantId={selectedSettlementRestId} 
-        selectedDate={selectedSettlementDate} 
-      />
+      {/* Merchant Function Sub-Tabs */}
+      <div 
+        id="merchant-navigation-tabs-bar"
+        className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-2xs flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+      >
+        <button
+          id="merchant-nav-menu"
+          onClick={() => setActiveMerchantSubTab('menu')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
+            activeMerchantSubTab === 'menu'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <UtensilsCrossed className="w-4 h-4" />
+          <span>จัดการเมนู & สต็อกอาหาร (Menu & Stock)</span>
+        </button>
+
+        <button
+          id="merchant-nav-orders"
+          onClick={() => setActiveMerchantSubTab('orders')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
+            activeMerchantSubTab === 'orders'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <ChefHat className="w-4 h-4" />
+          <span>ออเดอร์สด & หน้าจอครัว (Kitchen POS)</span>
+        </button>
+
+        <button
+          id="merchant-nav-settlement"
+          onClick={() => setActiveMerchantSubTab('settlement')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
+            activeMerchantSubTab === 'settlement'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <DollarSign className="w-4 h-4" />
+          <span>การเงิน & ตัดรอบบัญชี GP (Daily Settlement)</span>
+          {merchantStaffRole === 'kitchen' && (
+            <Lock className="w-3.5 h-3.5 text-amber-300 ml-0.5" />
+          )}
+        </button>
+
+        <button
+          id="merchant-nav-rbac"
+          onClick={() => setActiveMerchantSubTab('rbac')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
+            activeMerchantSubTab === 'rbac'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>สิทธิ์พนักงานร้านค้า (Staff RBAC)</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold ${
+            merchantStaffRole === 'owner' ? 'bg-amber-400 text-slate-900' :
+            merchantStaffRole === 'manager' ? 'bg-blue-400 text-slate-900' : 'bg-slate-200 text-slate-800'
+          }`}>
+            {merchantStaffRole === 'owner' ? '👑 เจ้าของ' :
+             merchantStaffRole === 'manager' ? '👔 ผู้จัดการ' : '🍳 พนักงานครัว'}
+          </span>
+        </button>
+      </div>
+
+      {activeMerchantSubTab === 'menu' && (
+        <MerchantMenuManagement restaurantId={selectedSettlementRestId} />
+      )}
+
+      {activeMerchantSubTab === 'orders' && (
+        <MerchantKitchenOrdersTab restaurantId={selectedSettlementRestId} />
+      )}
+
+      {activeMerchantSubTab === 'rbac' && (
+        <MerchantStaffRbacTab />
+      )}
+
+      {activeMerchantSubTab === 'settlement' && (
+        merchantStaffRole === 'kitchen' ? (
+          <div className="bg-white rounded-3xl p-8 border border-rose-200 text-center space-y-4 shadow-xs my-4">
+            <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Lock className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900">
+                จำกัดสิทธิ์การเข้าถึง — พนักงานครัว (Kitchen Staff)
+              </h3>
+              <p className="text-xs text-slate-600 max-w-lg mx-auto mt-1 leading-relaxed">
+                ตำแหน่งของคุณในร้าน <strong>{currentRestaurant?.name || 'กานดา ร้อยหม้อ'}</strong> ถูกกำหนดเป็น <strong>พนักงานครัว</strong> จึงไม่สามารถดูข้อมูลการเงิน ยอดโอนสุทธิ สัญญา GP และเลขที่บัญชีธนาคารได้
+              </p>
+            </div>
+            <div className="pt-2 flex flex-wrap justify-center gap-2.5">
+              <button
+                onClick={() => setActiveMerchantSubTab('orders')}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+              >
+                🍳 กลับไปหน้าจอทำอาหาร (Kitchen Orders)
+              </button>
+              <button
+                onClick={() => {
+                  setMerchantStaffRole('owner');
+                  triggerToast('สลับสิทธิ์เป็นเจ้าของร้าน', 'ปลดล็อคการเข้าถึงข้อมูลการเงิน', 'success');
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer shadow-xs"
+              >
+                👑 สลับสิทธิ์เป็นเจ้าของร้าน (Owner) เพื่อดูยอดเงิน
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Settlement Automation & Merchant KYC Verification Bar */}
+            <SettlementAutomationBar 
+              restaurantId={selectedSettlementRestId} 
+              selectedDate={selectedSettlementDate} 
+            />
 
       {/* Top Status Summary Card */}
       <div 
@@ -1084,31 +1235,51 @@ export const MerchantSettlementScreen: React.FC = () => {
             <Store className="w-3.5 h-3.5 text-emerald-600" />
             <span>เลือกร้านค้าพันธมิตร (Merchant Partner):</span>
           </label>
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {RESTAURANTS_DATA.map(rest => {
-              const isSelected = rest.id === selectedSettlementRestId;
-              return (
-                <button
-                  key={rest.id}
-                  id={`select-rest-settlement-${rest.id}`}
-                  onClick={() => setSelectedSettlementRestId(rest.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    isSelected
-                      ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-600'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-                  }`}
-                >
-                  <img
-                    src={rest.logoImage}
-                    alt={rest.name}
-                    className="w-5 h-5 rounded-lg object-cover border border-white/40 shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="truncate max-w-[140px]">{rest.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {activeMerchant ? (
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-emerald-50 border border-emerald-200">
+              <img
+                src={activeMerchant.restaurantLogo || RESTAURANTS_DATA.find(r => r.id === activeMerchant.restaurantId)?.logoImage}
+                alt={activeMerchant.restaurantName}
+                className="w-7 h-7 rounded-lg object-cover border border-white shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="font-black text-xs text-emerald-950 truncate block">
+                  {activeMerchant.restaurantName}
+                </span>
+                <span className="text-[10px] text-emerald-700 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5 shrink-0" />
+                  จำกัดสิทธิ์เฉพาะข้อมูลร้านค้าของตนเอง (Data Isolation)
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {RESTAURANTS_DATA.map(rest => {
+                const isSelected = rest.id === selectedSettlementRestId;
+                return (
+                  <button
+                    key={rest.id}
+                    id={`select-rest-settlement-${rest.id}`}
+                    onClick={() => setSelectedSettlementRestId(rest.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white shadow-xs ring-1 ring-emerald-600'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    <img
+                      src={rest.logoImage}
+                      alt={rest.name}
+                      className="w-5 h-5 rounded-lg object-cover border border-white/40 shrink-0"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="truncate max-w-[140px]">{rest.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Historical Date Selection Input & Presets */}
@@ -1672,6 +1843,9 @@ export const MerchantSettlementScreen: React.FC = () => {
           </table>
         </div>
       </div>
+          </>
+        )
+      )}
 
       {/* Settings Modal (Contract GP & Bank Account) */}
       <AnimatePresence>

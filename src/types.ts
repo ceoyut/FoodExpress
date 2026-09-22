@@ -49,6 +49,9 @@ export interface MenuItem {
   spicyLevels?: string[];
   dietary?: DietaryPreference[];
   options?: MenuItemOptionGroup[];
+  isAvailable?: boolean; // เปิด/ปิดการขาย (Active/Inactive)
+  inStockToday?: boolean; // สถานะวัตถุดิบวันนี้ (In Stock / Sold Out)
+  soldCountToday?: number; // จำนวนที่จำหน่ายได้วันนี้
 }
 
 export interface Restaurant {
@@ -241,6 +244,8 @@ export interface MerchantBankAccount {
 export type MerchantSocialProvider = 'google' | 'line' | 'facebook' | 'apple' | 'phone';
 export type MerchantGpTier = 'starter_15' | 'standard_20' | 'growth_25' | 'zerogp_0' | 'custom';
 
+export type MerchantStaffRole = 'owner' | 'manager' | 'kitchen';
+
 export interface MerchantAccount {
   id: string;
   ownerName: string;
@@ -261,7 +266,7 @@ export interface MerchantAccount {
   taxId?: string;
   bankAccount: MerchantBankAccount;
   joinedDate: string;
-  role: 'owner' | 'manager' | 'partner';
+  role: MerchantStaffRole | 'partner';
 }
 
 export interface MerchantSettlementConfig {

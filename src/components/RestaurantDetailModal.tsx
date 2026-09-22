@@ -31,15 +31,16 @@ interface RestaurantDetailModalProps {
 }
 
 export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ restaurant, onClose }) => {
-  const { user, userLocation, toggleFavorite, addToCart, reviews, setIsReviewModalOpen, setReviewingOrder } = useApp();
+  const { user, userLocation, toggleFavorite, addToCart, reviews, setIsReviewModalOpen, setReviewingOrder, restaurantList, triggerToast } = useApp();
+  const currentRestaurant = restaurantList.find(r => r.id === restaurant.id) || restaurant;
   const [activeTab, setActiveTab] = useState<'menu' | 'reviews' | 'info'>('menu');
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [isSlaModalOpen, setIsSlaModalOpen] = useState(false);
 
-  const effectiveDistance = getRestaurantDistance(restaurant, userLocation);
+  const effectiveDistance = getRestaurantDistance(currentRestaurant, userLocation);
   const displayDistance = formatDistance(effectiveDistance);
   const effectiveDeliveryFee = calculateStandardDeliveryFee(effectiveDistance);
-  const sla = getDeliverySlaDetails(effectiveDistance, restaurant.averagePrepTimeMinutes || 15);
+  const sla = getDeliverySlaDetails(effectiveDistance, currentRestaurant.averagePrepTimeMinutes || 15);
   const displayDeliveryTime = sla.totalMinutes;
 
   // Customization state for selected menu item
@@ -53,6 +54,10 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
 
   // When opening item customization
   const openCustomization = (item: MenuItem) => {
+    if (item.inStockToday === false) {
+      triggerToast('เมนูนี้หมดชั่วคราว ⚠️', `ทางร้าน ${currentRestaurant.name} แจ้งว่า "${item.name}" หมดชั่วคราวสำหรับวันนี้`, 'info');
+      return;
+    }
     setSelectedMenuItem(item);
     setQuantity(1);
     setSelectedSpicy(item.spicyLevels ? item.spicyLevels[1] || item.spicyLevels[0] : '');
@@ -89,7 +94,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
   }
 
   // Filter distinct categories in this restaurant
-  const menuItems = Array.isArray(restaurant?.menu) ? restaurant.menu : [];
+  const menuItems = Array.isArray(currentRestaurant?.menu) ? currentRestaurant.menu : [];
   const categories = Array.from(new Set(menuItems.map(m => m.category)));
 
   return (
@@ -307,27 +312,41 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {menuItems
                       .filter(m => m.category === category)
-                      .map(item => (
+                      .map(item => {
+                        const isOutOfStock = item.inStockToday === false;
+                        return (
                         <div
                           key={item.id}
                           id={`menu-item-${item.id}`}
                           onClick={() => openCustomization(item)}
-                          className="bg-white p-3 rounded-2xl border border-slate-150 shadow-xs hover:shadow-md transition-all flex gap-3 cursor-pointer group"
+                          className={`bg-white p-3 rounded-2xl border transition-all flex gap-3 cursor-pointer group ${
+                            isOutOfStock 
+                              ? 'border-slate-200 bg-slate-50/70 opacity-75' 
+                              : 'border-slate-150 shadow-xs hover:shadow-md'
+                          }`}
                         >
                           <div className="flex-1 flex flex-col justify-between">
                             <div>
                               <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                {item.isPopular && (
-                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                                    <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                                    ยอดนิยม
+                                {isOutOfStock ? (
+                                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-200">
+                                    หมดชั่วคราว
                                   </span>
-                                )}
-                                {item.isSpicy && (
-                                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                                    <Flame className="w-2.5 h-2.5 text-rose-500" />
-                                    เผ็ด
-                                  </span>
+                                ) : (
+                                  <>
+                                    {item.isPopular && (
+                                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                        ยอดนิยม
+                                      </span>
+                                    )}
+                                    {item.isSpicy && (
+                                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                                        <Flame className="w-2.5 h-2.5 text-rose-500" />
+                                        เผ็ด
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                                 {item.dietary?.map(dietId => {
                                   const c = getDietaryConfig(dietId);
@@ -344,7 +363,9 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                                 })}
                               </div>
 
-                              <h4 className="font-bold text-slate-900 text-xs sm:text-sm group-hover:text-emerald-700 transition-colors line-clamp-1">
+                              <h4 className={`font-bold text-xs sm:text-sm line-clamp-1 transition-colors ${
+                                isOutOfStock ? 'text-slate-400 line-through' : 'text-slate-900 group-hover:text-emerald-700'
+                              }`}>
                                 {item.name}
                               </h4>
                               <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">
@@ -354,7 +375,7 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
 
                             <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                               <div className="flex items-baseline gap-1.5">
-                                <span className="font-extrabold text-sm text-slate-900">
+                                <span className={`font-extrabold text-sm ${isOutOfStock ? 'text-slate-400' : 'text-slate-900'}`}>
                                   ฿{item.price}
                                 </span>
                                 {item.originalPrice && (
@@ -364,27 +385,43 @@ export const RestaurantDetailModal: React.FC<RestaurantDetailModalProps> = ({ re
                                 )}
                               </div>
 
-                              <button
-                                id={`add-btn-${item.id}`}
-                                className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center transition-colors"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
+                              {isOutOfStock ? (
+                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100">
+                                  ของหมด
+                                </span>
+                              ) : (
+                                <button
+                                  id={`add-btn-${item.id}`}
+                                  className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
 
                           {/* Image thumbnail */}
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-slate-100 shrink-0">
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              className={`w-full h-full object-cover transition-transform duration-200 ${
+                                isOutOfStock ? 'grayscale opacity-60' : 'group-hover:scale-105'
+                              }`}
                               referrerPolicy="no-referrer"
                               loading="lazy"
                             />
+                            {isOutOfStock && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <span className="text-[9px] font-black text-white uppercase bg-black/60 px-1.5 py-0.5 rounded">
+                                  หมด
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
