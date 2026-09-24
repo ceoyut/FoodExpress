@@ -495,10 +495,13 @@ export const MerchantSettlementScreen: React.FC = () => {
     addNotification({
       title,
       body,
-      type: 'system',
+      type: 'financial',
+      targetRole: 'merchant',
+      priority: 'high',
       timestamp: 'เมื่อสักครู่',
       badge: 'แจ้งเตือนการเงิน',
       actionText: 'ดูยอดรอโอน',
+      actionTab: 'pos_settlement',
       targetId: currentSettlement.id,
     });
 

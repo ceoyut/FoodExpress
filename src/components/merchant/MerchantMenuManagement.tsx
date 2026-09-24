@@ -23,10 +23,296 @@ import {
   EyeOff,
   ChefHat,
   UserCheck,
-  Crown
+  Crown,
+  Upload,
+  Image as ImageIcon,
+  Camera,
+  FileImage,
+  Check,
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MenuItem, MerchantStaffRole, Restaurant } from '../../types';
+
+// Preset Food Photography for quick merchant selection
+const FOOD_PHOTO_PRESETS = [
+  {
+    name: 'ต้มยำกุ้งแม่น้ำหม้อไฟ',
+    category: 'ต้มยำ/แกงโบราณ',
+    url: 'https://images.unsplash.com/photo-1548943487-a2e4e43b4853?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'กะเพราถาดโบราณไข่ดาว',
+    category: 'ผัดกะเพรา/จานด่วน',
+    url: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ข้าวผัดกุ้งแม่น้ำทรงเครื่อง',
+    category: 'ข้าวผัด/อาหารจานเดียว',
+    url: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ส้มตำไทยไข่เค็มทรงเครื่อง',
+    category: 'ส้มตำ/ยำรสเด็ด',
+    url: 'https://images.unsplash.com/photo-1559847844-5315695dadae?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ผัดไทยกุ้งสดห่อไข่',
+    category: 'ก๋วยเตี๋ยว/ผัดไทย',
+    url: 'https://images.unsplash.com/photo-1559314809-0d155014e29e?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ก๋วยเตี๋ยวต้มยำมะนาวสด',
+    category: 'ก๋วยเตี๋ยว/เส้น',
+    url: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'แกงมัสมั่นเนื้อน่องลาย',
+    category: 'แกงไทย/ต้ม',
+    url: 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ไก่ทอดหาดใหญ่หอมเจียว',
+    category: 'ของทอด/กับแกล้ม',
+    url: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'ชาไทยเย็นพรีเมียม',
+    category: 'เครื่องดื่ม',
+    url: 'https://images.unsplash.com/photo-1558857563-b371033873b8?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    name: 'บัวลอยน้ำกะทิมะพร้าวอ่อน',
+    category: 'ของหวานไทย',
+    url: 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=800&auto=format&fit=crop&q=80',
+  }
+];
+
+// Helper: Instant client-side photo compression to avoid massive base64 payloads
+const compressAndReadImage = (file: File, callback: (dataUrl: string) => void) => {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', 0.85);
+        callback(compressed);
+      } else {
+        callback(event.target?.result as string);
+      }
+    };
+    img.src = event.target?.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
+// Interactive Subcomponent for selecting and uploading food photos
+interface ImageSelectorProps {
+  currentImage: string;
+  onImageChange: (url: string) => void;
+  title?: string;
+}
+
+const MenuItemImageSelector: React.FC<ImageSelectorProps> = ({ currentImage, onImageChange, title = 'รูปภาพอาหาร' }) => {
+  const [activeTab, setActiveTab] = useState<'upload' | 'preset' | 'url'>('upload');
+  const [urlInput, setUrlInput] = useState(currentImage || '');
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WEBP)');
+      return;
+    }
+    compressAndReadImage(file, (dataUrl) => {
+      onImageChange(dataUrl);
+      setUrlInput(dataUrl);
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  return (
+    <div className="space-y-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+          <span>{title}</span>
+        </label>
+        <span className="text-[10px] text-slate-400">ขนาดแนะนำ 1:1 หรือ 4:3 (คมชัด บีบอัดอัตโนมัติ)</span>
+      </div>
+
+      {/* Preview Card and Selectors */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border border-slate-200 shrink-0 bg-slate-200 shadow-2xs group">
+          {currentImage ? (
+            <img 
+              src={currentImage} 
+              alt="Food Preview" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&auto=format&fit=crop&q=80';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-[10px]">
+              <FileImage className="w-6 h-6 mb-1" />
+              <span>ไม่มีรูป</span>
+            </div>
+          )}
+          <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-xs text-white text-[9px] px-1.5 py-0.5 rounded-md font-bold">
+            พรีวิวสด
+          </div>
+        </div>
+
+        <div className="flex-1 w-full space-y-1.5">
+          <div className="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-xl text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('upload')}
+              className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                activeTab === 'upload' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              📁 อัปโหลด/ถ่ายภาพ
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('preset')}
+              className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                activeTab === 'preset' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              🖼️ คลังภาพอาหาร
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('url')}
+              className={`flex-1 py-1 rounded-lg text-center transition-all cursor-pointer ${
+                activeTab === 'url' ? 'bg-white text-emerald-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              🔗 ใส่ลิงก์ URL
+            </button>
+          </div>
+
+          {activeTab === 'upload' && (
+            <div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleFile(e.target.files[0]);
+                  }
+                }}
+              />
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-2.5 rounded-xl border border-dashed text-center cursor-pointer transition-all ${
+                  isDragging 
+                    ? 'border-emerald-500 bg-emerald-50' 
+                    : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/50 bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>คลิกเพื่ออัปโหลด หรือลากวางไฟล์ที่นี่</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">รองรับ JPG, PNG, WEBP (แปลงและปรับขนาดให้อัตโนมัติ)</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'url' && (
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={urlInput}
+                onChange={(e) => {
+                  setUrlInput(e.target.value);
+                  onImageChange(e.target.value);
+                }}
+                placeholder="วางลิงก์รูปภาพ เช่น https://images.unsplash.com/..."
+                className="flex-1 p-2 text-xs border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Preset Gallery Accordion */}
+      {activeTab === 'preset' && (
+        <div className="pt-2 border-t border-slate-200/80">
+          <div className="text-[10px] font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+            <span>คลิกเลือกรูปภาพอาหารไทยคุณภาพสูง:</span>
+            <span className="text-emerald-600 font-bold">10 รายการแนะนำ</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 max-h-40 overflow-y-auto pr-1">
+            {FOOD_PHOTO_PRESETS.map((p, idx) => {
+              const isSelected = currentImage === p.url;
+              return (
+                <button
+                  type="button"
+                  key={idx}
+                  onClick={() => {
+                    onImageChange(p.url);
+                    setUrlInput(p.url);
+                  }}
+                  className={`group relative rounded-xl overflow-hidden border p-1 text-left transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'border-emerald-600 ring-2 ring-emerald-500/30 bg-emerald-50' 
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="aspect-square w-full rounded-lg overflow-hidden relative">
+                    <img src={p.url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-emerald-600/40 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white drop-shadow-md" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-800 truncate mt-1">
+                    {p.name}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface MerchantMenuManagementProps {
   restaurantId: string;
@@ -599,15 +885,11 @@ export const MerchantMenuManagement: React.FC<MerchantMenuManagementProps> = ({ 
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-800">URL รูปภาพอาหาร</label>
-                <input
-                  type="text"
-                  value={newImage}
-                  onChange={(e) => setNewImage(e.target.value)}
-                  className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                />
-              </div>
+              <MenuItemImageSelector
+                currentImage={newImage}
+                onImageChange={setNewImage}
+                title="รูปภาพอาหารเมนูใหม่"
+              />
 
               <div className="flex items-center gap-4 pt-1 text-xs">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -727,6 +1009,12 @@ export const MerchantMenuManagement: React.FC<MerchantMenuManagementProps> = ({ 
                   className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                 />
               </div>
+
+              <MenuItemImageSelector
+                currentImage={editingItem.image}
+                onImageChange={(url) => setEditingItem({ ...editingItem, image: url })}
+                title="รูปภาพอาหารเมนูนี้"
+              />
 
               <div className="flex items-center gap-4 pt-1 text-xs">
                 <label className="flex items-center gap-2 cursor-pointer">

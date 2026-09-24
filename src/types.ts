@@ -175,15 +175,21 @@ export interface Coupon {
   categoryIcon?: string;
 }
 
+export type NotificationRole = 'customer' | 'merchant' | 'rider' | 'admin' | 'all';
+export type NotificationType = 'promo' | 'order' | 'reward' | 'financial' | 'job' | 'system' | 'safety';
+
 export interface NotificationItem {
   id: string;
   title: string;
   body: string;
-  type: 'promo' | 'order' | 'reward' | 'system';
+  type: NotificationType;
+  targetRole: NotificationRole;
+  priority?: 'normal' | 'high' | 'urgent';
   timestamp: string;
   read: boolean;
   actionText?: string;
   targetId?: string;
+  actionTab?: 'home' | 'orders' | 'rewards' | 'profile' | 'pos_settlement' | 'rider_hub' | 'admin_portal';
   badge?: string;
 }
 

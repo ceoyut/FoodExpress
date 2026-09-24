@@ -9,6 +9,7 @@ import {
   Review, 
   Coupon, 
   NotificationItem, 
+  NotificationRole,
   UserProfile, 
   DeviceViewMode,
   OrderStatus,
@@ -173,8 +174,11 @@ interface AppContextType {
   // Notifications
   notifications: NotificationItem[];
   unreadNotificationCount: number;
+  currentActiveRole: NotificationRole;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  markRoleNotificationsRead: (role?: NotificationRole | 'all') => void;
+  deleteNotification: (id: string) => void;
   addNotification: (item: Omit<NotificationItem, 'id' | 'timestamp' | 'read'> & Partial<NotificationItem>) => void;
   
   // UI & View State
@@ -486,8 +490,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: item.title,
       body: item.body,
       type: item.type || 'system',
+      targetRole: item.targetRole || 'customer',
+      priority: item.priority || 'normal',
       actionText: item.actionText,
       targetId: item.targetId,
+      actionTab: item.actionTab,
       badge: item.badge,
     };
     setNotifications(prev => [newItem, ...prev]);
@@ -1979,8 +1986,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: '💳 เติมเงินวอลเล็ตสำเร็จ',
       body: `คุณได้เติมเงิน ฿${amount.toLocaleString()} เข้าสู่วอลเล็ต ยอดคงเหลือ ฿${(user.walletBalance + amount).toLocaleString()}`,
       type: 'system',
+      targetRole: 'customer',
+      priority: 'normal',
       timestamp: 'เมื่อสักครู่',
       read: false,
+      badge: 'วอลเล็ต',
+      actionTab: 'profile',
     };
     setNotifications(prev => [newNotif, ...prev]);
     triggerToast('เติมเงินสำเร็จ!', `เพิ่ม ฿${amount.toLocaleString()} ในวอลเล็ตแล้ว`, 'success');
@@ -2169,8 +2180,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: `🛍️ ออเดอร์ ${newOrder.id} ได้รับการยืนยันแล้ว`,
       body: `ร้าน ${newOrder.restaurantName} กำลังเริ่มปรุงอาหาร ไรเดอร์ ${DEFAULT_RIDER.name} จะนำส่งให้คุณ`,
       type: 'order',
+      targetRole: 'customer',
+      priority: 'normal',
       timestamp: 'เมื่อสักครู่',
       read: false,
+      badge: 'สถานะออเดอร์',
+      actionText: 'ติดตามออเดอร์',
+      actionTab: 'orders',
       targetId: newOrder.id,
     };
 
@@ -2184,9 +2200,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: `notif_merchant_${Date.now()}`,
         title: `🔔 ยอดขายสำเร็จ! ร้าน ${newOrder.restaurantName}`,
         body: `ออเดอร์ ${newOrder.id} ได้รับชำระเงินสำเร็จ ฿${newOrder.total.toLocaleString()} (${newOrder.paymentMethod === 'promptpay_qr' ? 'พร้อมเพย์ QR' : newOrder.paymentMethod === 'wallet' ? 'วอลเล็ต' : newOrder.paymentMethod === 'credit_card' ? 'บัตรเครดิต' : 'เงินสด POS'}) กรุณาจัดเตรียมอาหาร`,
-        type: 'system',
+        type: 'order',
+        targetRole: 'merchant',
+        priority: 'urgent',
         timestamp: 'เมื่อสักครู่',
         read: false,
+        badge: 'ออเดอร์หน้าร้าน',
+        actionText: 'เปิดรับออเดอร์',
+        actionTab: 'pos_settlement',
         targetId: newOrder.id,
       });
     }
@@ -2697,7 +2718,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user.id, user.name, user.avatar, activeOrder?.id, triggerToast]);
 
   // Notifications helpers
-  const unreadNotificationCount = notifications.filter(n => !n.read).length;
+  const currentActiveRole: NotificationRole = 
+    activeTab === 'pos_settlement' ? 'merchant' :
+    activeTab === 'rider_hub' ? 'rider' :
+    activeTab === 'admin_portal' ? 'admin' : 'customer';
+
+  // Role-aware unread count: calculates unread count relevant to current active role
+  const unreadNotificationCount = notifications.filter(n => 
+    !n.read && (n.targetRole === currentActiveRole || n.targetRole === 'all' || !n.targetRole)
+  ).length;
 
   const markNotificationRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -2707,6 +2736,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     triggerToast('อัปเดตแล้ว', 'อ่านการแจ้งเตือนทั้งหมดเรียบร้อย', 'info');
   }, [triggerToast]);
+
+  const markRoleNotificationsRead = useCallback((role?: NotificationRole | 'all') => {
+    setNotifications(prev => prev.map(n => {
+      if (!role || role === 'all' || n.targetRole === role || n.targetRole === 'all') {
+        return { ...n, read: true };
+      }
+      return n;
+    }));
+    triggerToast('อัปเดตแล้ว', 'อ่านการแจ้งเตือนในหมวดนี้เรียบร้อย', 'info');
+  }, [triggerToast]);
+
+  const deleteNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
 
   // Reset Demo Data
   const resetAllData = useCallback(() => {
@@ -2773,8 +2816,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addReview,
       notifications,
       unreadNotificationCount,
+      currentActiveRole,
       markNotificationRead,
       markAllNotificationsRead,
+      markRoleNotificationsRead,
+      deleteNotification,
       addNotification,
       deviceMode,
       setDeviceMode,
