@@ -14,6 +14,7 @@ import { RestaurantSortOption, DietaryPreference } from '../types';
 import { getRestaurantDistance } from '../utils/geolocation';
 import { calculateStandardDeliveryFee } from '../utils/riderFareCalculator';
 import { DeliverySlaModal } from '../components/DeliverySlaModal';
+import { PageFooter } from '../components/PageFooter';
 import foodMascotImg from '../assets/images/food_mascot_1789709435278.jpg';
 import messengerImg from '../assets/images/messenger_scooter_1789709446992.jpg';
 import taxiRideImg from '../assets/images/taxi_ride_1789709464979.jpg';
@@ -629,6 +630,9 @@ export const HomeScreen: React.FC = () => {
           </button>
         </div>
       )}
+
+        {/* Professional Website & Operations Page Footer */}
+        <PageFooter />
       </div>
 
       {/* Interactive Service Modals & Favorites (From User's Reference UX) */}

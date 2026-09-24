@@ -16,9 +16,14 @@ import {
   Sparkles,
   CheckCircle2,
   UserPlus,
-  KeyRound
+  KeyRound,
+  Store,
+  Bike,
+  ChevronRight
 } from 'lucide-react';
 import { RESTAURANTS_DATA } from '../data/mockData';
+import { INITIAL_MERCHANT_ACCOUNTS } from '../data/merchantAuthData';
+import { INITIAL_ACTIVE_RIDER } from '../data/riderData';
 
 interface AuthModalProps {
   onClose?: () => void;
@@ -35,6 +40,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     activeTab,
     setActiveTab, 
     setIsAuthModalOpen,
+    setActiveMerchant,
+    setSelectedSettlementRestId,
+    setActiveRider,
     triggerToast 
   } = useApp();
 
@@ -332,6 +340,107 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
               <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-2 text-[11px] text-slate-600">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>การเชื่อมต่อข้อมูลได้รับการเข้ารหัสด้วย SSL 256-bit ปลอดภัยสูงสุด</span>
+              </div>
+
+              {/* Partner Portals & Backoffice Quick Launch */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900">
+                    บริการสำหรับพาร์ทเนอร์และระบบปฏิบัติการ
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    Partner Access
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {/* Merchant POS */}
+                  <button
+                    type="button"
+                    id="profile-launch-merchant-pos-btn"
+                    onClick={() => {
+                      const kanda = INITIAL_MERCHANT_ACCOUNTS[0];
+                      if (kanda) {
+                        setActiveMerchant(kanda);
+                        setSelectedSettlementRestId(kanda.restaurantId);
+                      }
+                      setActiveTab('pos_settlement');
+                      handleClose();
+                      triggerToast('เปิดระบบร้านค้า', 'เข้าสู่ FoodExpress Merchant POS', 'info');
+                    }}
+                    className="w-full p-2.5 rounded-2xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
+                        <Store className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-amber-950 truncate">
+                          FoodExpress Merchant (ร้านค้า)
+                        </div>
+                        <div className="text-[11px] text-amber-800 truncate">
+                          จัดการร้านอาหาร เมนู ออเดอร์เข้า ยอดขาย GP เป็นธรรม
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-700 shrink-0" />
+                  </button>
+
+                  {/* Rider Hub */}
+                  <button
+                    type="button"
+                    id="profile-launch-rider-hub-btn"
+                    onClick={() => {
+                      setActiveRider(INITIAL_ACTIVE_RIDER);
+                      setActiveTab('rider_hub');
+                      handleClose();
+                      triggerToast('เปิดระบบไรเดอร์', 'เข้าสู่ FoodExpress Rider Hub', 'info');
+                    }}
+                    className="w-full p-2.5 rounded-2xl border border-sky-200 bg-sky-50/70 hover:bg-sky-100 text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold shrink-0">
+                        <Bike className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-sky-950 truncate">
+                          FoodExpress Rider Hub (ไรเดอร์)
+                        </div>
+                        <div className="text-[11px] text-sky-800 truncate">
+                          คิวรับงานอัจฉริยะ GPS นำทาง โหมดฝนตก งานพ่วง
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-sky-700 shrink-0" />
+                  </button>
+
+                  {/* Admin HQ */}
+                  <button
+                    type="button"
+                    id="profile-launch-admin-hq-btn"
+                    onClick={() => {
+                      setActiveTab('admin_portal');
+                      handleClose();
+                      triggerToast('เปิดระบบแอดมิน', 'เข้าสู่ศูนย์บัญชาการ FoodExpress Admin HQ', 'info');
+                    }}
+                    className="w-full p-2.5 rounded-2xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-black text-rose-950 truncate">
+                          FoodExpress Admin HQ (ศูนย์บัญชาการ)
+                        </div>
+                        <div className="text-[11px] text-rose-800 truncate">
+                          สิทธิ์ 4 ระดับ (RBAC) มอนิเตอร์สด บัญชีและการเงิน
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-rose-700 shrink-0" />
+                  </button>
+                </div>
               </div>
 
               {/* Reset Data Button */}
