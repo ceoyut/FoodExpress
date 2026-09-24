@@ -382,6 +382,20 @@ export interface RiderQueueItem {
   currentOrderId?: string;
 }
 
+export interface BatchSecondaryOrder {
+  id: string;
+  orderNumber: string;
+  restaurantName: string;
+  restaurantAddress: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  itemsSummary: string;
+  itemsCount: number;
+  addedEarnings: number;
+  extraDistanceKm: number;
+}
+
 export interface DispatchQueueOrder {
   id: string;
   orderNumber: string;
@@ -401,6 +415,10 @@ export interface DispatchQueueOrder {
   distanceFee: number; // ค่าระยะทาง
   specialIncentive: number; // โบนัสช่วงพีค
   customerTip: number; // ทิปจากลูกค้า
+  rainSurge?: number; // โบนัสสภาพอากาศฝนตก
+  isBatch?: boolean; // ออเดอร์พ่วง
+  batchSecondaryOrder?: BatchSecondaryOrder; // ออเดอร์รองในงานพ่วง
+  batchBonus?: number; // โบนัสงานพ่วง
   totalTripEarnings: number; // รวมรายได้รอบนี้
   matchedZone: string;
   status: 'queued' | 'offered' | 'accepted' | 'picked_up' | 'delivered';
@@ -468,6 +486,37 @@ export interface ActiveRiderAccount {
   currentQueuePosition?: number;
   totalInQueueCount?: number;
   applicationStatus: RiderApplicationStatus;
+  tier?: RiderTier;
+}
+
+export type RiderTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+export type RiderWeatherMode = 'clear' | 'rain' | 'storm';
+
+export interface RiderTierConfig {
+  id: RiderTier;
+  titleTh: string;
+  badgeEmoji: string;
+  badgeBg: string;
+  badgeText: string;
+  borderClass: string;
+  minMonthlyTrips: number;
+  minAcceptanceRate: number;
+  minRating: number;
+  earningBonusPercent: number; // e.g. 0%, 3%, 6%, 10%
+  earlyDispatchSeconds: number; // 0, 3, 5, 8 วินาที
+  insuranceCoverageTh: string;
+  perks: string[];
+}
+
+export interface RiderDailyQuest {
+  id: string;
+  title: string;
+  targetCount: number;
+  currentCount: number;
+  bonusBaht: number;
+  completed: boolean;
+  claimed: boolean;
+  iconEmoji: string;
 }
 
 export type Language = 'th' | 'en';
@@ -489,6 +538,43 @@ export interface RiderReportedIssue {
 // ADMIN & PLATFORM HQ TYPES
 // ==========================================
 export type AdminRole = 'super_admin' | 'operations' | 'finance' | 'support';
+
+export interface RolePermissionDetail {
+  id: AdminRole;
+  title: string;
+  thaiTitle: string;
+  badgeTitle: string;
+  roleIcon: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  accentBg: string;
+  accentBorder: string;
+  description: string;
+  department: string;
+  allowedActions: string[];
+  restrictedActions: string[];
+  permissions: {
+    canDispatchAndCancelOrders: boolean;
+    canEditMerchantGP: boolean;
+    canApproveRiders: boolean;
+    canApprovePayouts: boolean;
+    canResolveDisputes: boolean;
+    canAccessSettings: boolean;
+  };
+}
+
+export interface StandardRbacMatrixItem {
+  id: string;
+  featureTitle: string;
+  category: string;
+  description: string;
+  superAdmin: boolean | string;
+  operations: boolean | string;
+  finance: boolean | string;
+  support: boolean | string;
+  rationale: string;
+}
 
 export interface PlatformSystemConfig {
   defaultGpPercent: number;

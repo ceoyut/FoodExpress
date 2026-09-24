@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { RiderVoiceAssistant } from './RiderVoiceAssistant';
 import { RiderFareStandardsModal } from './RiderFareStandardsModal';
+import { RiderTurnByTurnNav } from './RiderTurnByTurnNav';
+import { RiderBatchOfferModal } from './RiderBatchOfferModal';
 import { calculateThaiRiderFare } from '../../utils/riderFareCalculator';
+import { RIDER_TIERS_CONFIG } from '../../data/riderData';
 import { 
   Radio, 
   Power, 
@@ -28,7 +31,14 @@ import {
   Camera,
   MessageSquare,
   ShieldAlert,
-  Image as ImageIcon
+  Image as ImageIcon,
+  CloudRain,
+  CloudLightning,
+  Layers,
+  Award,
+  ChevronDown,
+  ChevronUp,
+  Compass
 } from 'lucide-react';
 
 export const RiderQueueTab: React.FC = () => {
@@ -46,8 +56,17 @@ export const RiderQueueTab: React.FC = () => {
     deliveryStepIndex, 
     advanceDeliveringStep, 
     triggerSimulatedIncomingOrder,
-    triggerToast
+    triggerToast,
+    riderWeatherMode,
+    activeBatchOffer,
+    triggerInTripBatchOffer,
+    acceptInTripBatchOffer,
+    declineInTripBatchOffer,
+    riderQuests
   } = useApp();
+
+  // Navigation simulation toggle
+  const [showNavConsole, setShowNavConsole] = useState<boolean>(true);
 
   // Proof of Delivery (POD) states
   const [podMethod, setPodMethod] = useState<'door_drop' | 'hand_over' | 'lobby_security'>('door_drop');
@@ -94,6 +113,38 @@ export const RiderQueueTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* WEATHER MODE REAL-TIME SURCHARGE & HAZARD ADVISORY */}
+      {riderWeatherMode !== 'clear' && (
+        <div className={`p-4 rounded-2xl border shadow-xs flex items-start justify-between gap-3 animate-in fade-in duration-300 ${
+          riderWeatherMode === 'storm' 
+            ? 'bg-purple-900/10 border-purple-300 text-purple-950'
+            : 'bg-blue-900/10 border-blue-300 text-blue-950'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-xl text-white shadow-xs ${
+              riderWeatherMode === 'storm' ? 'bg-purple-600' : 'bg-blue-500'
+            }`}>
+              {riderWeatherMode === 'storm' ? <CloudLightning className="w-5 h-5 animate-pulse" /> : <CloudRain className="w-5 h-5 animate-bounce" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider">
+                  {riderWeatherMode === 'storm' ? '⛈️ โหมดพายุฝนฟ้าคะนองรุนแรง (Storm Hazard Mode)' : '🌦️ โหมดฝนตกหนัก (Rain Surcharge Active)'}
+                </span>
+                <span className="text-[10px] font-black bg-white px-2 py-0.5 rounded-full border border-current shadow-2xs">
+                  โบนัสเสี่ยงภัย {riderWeatherMode === 'storm' ? '+฿25.00' : '+฿15.00'} ทุกงาน
+                </span>
+              </div>
+              <p className="text-xs text-slate-700 mt-1">
+                {riderWeatherMode === 'storm' 
+                  ? '⚠️ ถนนเปียกลื่นมาก ทัศนวิสัยต่ำ แนะนำขับขี่ไม่เกิน 35 กม./ชม. และเปิดไฟหน้ารถ หากสภาพอากาศวิกฤตสามารถจอดหลบในปั๊มหรือใต้สะพานได้โดยไม่เสียคะแนนรับงาน' 
+                  : 'ถนนเปียกลื่น เพิ่มระยะเบรก 2 เท่า สวมเสื้อกันฝนและคลุมกล่องใส่อาหารให้มิดชิด บริษัทเพิ่มเงินพิเศษเสี่ยงภัยให้คุณอัตโนมัติในทุกออเดอร์'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP SHIFT STATUS & ZONE CONTROLLER */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -213,44 +264,131 @@ export const RiderQueueTab: React.FC = () => {
 
       {/* 2. ACTIVE DELIVERING TRIP (IF RIDER HAS ACCEPTED AN ORDER) */}
       {activeDeliveringTrip && (
-        <div className="bg-white rounded-2xl border-2 border-emerald-500 shadow-md p-5 space-y-4 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-              <h4 className="text-sm font-black text-slate-900">
-                กำลังดำเนินการจัดส่ง ({activeDeliveringTrip.orderNumber})
-              </h4>
+        <div className="bg-white rounded-2xl border-2 border-emerald-500 shadow-md p-4 sm:p-5 space-y-4 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-black text-slate-900">
+                    กำลังดำเนินการจัดส่ง ({activeDeliveringTrip.orderNumber})
+                  </h4>
+                  {activeDeliveringTrip.isBatch && (
+                    <span className="text-[10px] font-extrabold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-purple-600" />
+                      <span>งานพ่วง 2 ออเดอร์ (+฿{activeDeliveringTrip.batchBonus?.toFixed(2) || '38.00'})</span>
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  {activeDeliveringTrip.isBatch 
+                    ? 'เส้นทางประหยัดน้ำมัน รวม 2 ร้านค้า 2 จุดส่งทางเดียวกัน' 
+                    : 'ออเดอร์เดี่ยว มาตรฐานระยะทางจริง'}
+                </p>
+              </div>
             </div>
-            <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
-              ค่ารอบสุทธิ ฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)}
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl shadow-2xs">
+                ค่ารอบสุทธิ ฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)}
+              </span>
+
+              {!activeDeliveringTrip.isBatch && deliveryStepIndex < 2 && (
+                <button
+                  type="button"
+                  id="simulate-in-trip-batch-offer-btn"
+                  onClick={triggerInTripBatchOffer}
+                  className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
+                  title="ทดสอบระบบจับคู่งานพ่วงอัตโนมัติขณะวิ่งงาน"
+                >
+                  <Zap className="w-3.5 h-3.5 text-purple-600 animate-bounce" />
+                  <span className="hidden sm:inline">จำลองงานพ่วงเด้งเข้า (+฿38)</span>
+                  <span className="sm:hidden">งานพ่วง</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* GPS TURN-BY-TURN NAVIGATOR SIMULATOR */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowNavConsole(prev => !prev)}
+                className="text-xs font-bold text-slate-700 hover:text-slate-900 flex items-center gap-1.5 cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all"
+              >
+                <Compass className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{showNavConsole ? 'ซ่อน GPS Simulator' : 'แสดง GPS Simulator & เสียงสังเคราะห์นำทาง'}</span>
+                {showNavConsole ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                ขับขี่ปลอดภัยตามคำแนะนำเลนและทางเลี้ยว
+              </span>
+            </div>
+
+            {showNavConsole && (
+              <RiderTurnByTurnNav
+                activeTrip={activeDeliveringTrip}
+                currentStep={deliveryStepIndex}
+                onStepAdvance={advanceDeliveringStep}
+              />
+            )}
           </div>
 
           {/* Stepper Progress */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            {[
-              { step: 0, label: '1. เดินทางไปร้านค้า', desc: activeDeliveringTrip.restaurantName },
-              { step: 1, label: '2. นำส่งลูกค้า', desc: activeDeliveringTrip.customerName },
-              { step: 2, label: '3. ส่งมอบ & รับเงิน', desc: 'ยอดเงินเข้าวอลเล็ตทันที' },
-            ].map(s => (
-              <div 
-                key={s.step} 
-                className={`p-2.5 rounded-xl border text-center transition-all ${
-                  deliveryStepIndex === s.step
-                    ? 'border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500'
-                    : deliveryStepIndex > s.step
-                    ? 'border-slate-200 bg-slate-50 text-slate-400'
-                    : 'border-slate-200 bg-white opacity-60'
-                }`}
-              >
-                <div className="text-[11px] font-bold">{s.label}</div>
-                <div className="text-[10px] truncate text-slate-500">{s.desc}</div>
-              </div>
-            ))}
-          </div>
+          {activeDeliveringTrip.isBatch && activeDeliveringTrip.batchSecondaryOrder ? (
+            /* 4-Step Stepper for Batch Stacked Orders */
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {[
+                { step: 0, label: '1. ร้านที่ 1', desc: activeDeliveringTrip.restaurantName },
+                { step: 1, label: '2. ร้านที่ 2', desc: activeDeliveringTrip.batchSecondaryOrder.restaurantName },
+                { step: 2, label: '3. ส่งลูกค้าคนแรก', desc: activeDeliveringTrip.customerName },
+                { step: 3, label: '4. ส่งลูกค้าคนที่ 2', desc: activeDeliveringTrip.batchSecondaryOrder.customerName },
+              ].map(s => (
+                <div 
+                  key={s.step} 
+                  className={`p-2.5 rounded-xl border text-center transition-all ${
+                    deliveryStepIndex === s.step
+                      ? 'border-purple-500 bg-purple-50/80 ring-1 ring-purple-500 shadow-2xs'
+                      : deliveryStepIndex > s.step
+                      ? 'border-emerald-300 bg-emerald-50/50 text-emerald-700'
+                      : 'border-slate-200 bg-white opacity-60'
+                  }`}
+                >
+                  <div className="text-[11px] font-bold">{s.label}</div>
+                  <div className="text-[10px] truncate text-slate-600 font-medium">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* 3-Step Stepper for Standard Single Order */
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {[
+                { step: 0, label: '1. เดินทางไปร้านค้า', desc: activeDeliveringTrip.restaurantName },
+                { step: 1, label: '2. นำส่งลูกค้า', desc: activeDeliveringTrip.customerName },
+                { step: 2, label: '3. ส่งมอบ & รับเงิน', desc: 'ยอดเงินเข้าวอลเล็ตทันที' },
+              ].map(s => (
+                <div 
+                  key={s.step} 
+                  className={`p-2.5 rounded-xl border text-center transition-all ${
+                    deliveryStepIndex === s.step
+                      ? 'border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500 shadow-2xs'
+                      : deliveryStepIndex > s.step
+                      ? 'border-emerald-300 bg-emerald-50/50 text-emerald-700'
+                      : 'border-slate-200 bg-white opacity-60'
+                  }`}
+                >
+                  <div className="text-[11px] font-bold">{s.label}</div>
+                  <div className="text-[10px] truncate text-slate-500">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Current Step Action Card */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            {/* STEP 0: First Restaurant Pickup */}
             {deliveryStepIndex === 0 && (
               <div className="space-y-2">
                 <div className="flex items-start justify-between">
@@ -280,19 +418,64 @@ export const RiderQueueTab: React.FC = () => {
                   className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer transition-colors shadow-xs flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>ถึงร้านอาหาร & ตรวจรับอาหารเรียบร้อยแล้ว 🥡</span>
+                  <span>
+                    {activeDeliveringTrip.isBatch 
+                      ? 'ถึงร้านที่ 1 & ตรวจรับอาหารเรียบร้อยแล้ว (ไปรับร้านที่ 2) 🥡' 
+                      : 'ถึงร้านอาหาร & ตรวจรับอาหารเรียบร้อยแล้ว 🥡'}
+                  </span>
                 </button>
               </div>
             )}
 
-            {deliveryStepIndex === 1 && (
+            {/* STEP 1 FOR BATCH: Second Restaurant Pickup */}
+            {deliveryStepIndex === 1 && activeDeliveringTrip.isBatch && activeDeliveringTrip.batchSecondaryOrder && (
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Store className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <span>{activeDeliveringTrip.batchSecondaryOrder.restaurantName}</span>
+                        <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded">ร้านที่ 2</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {activeDeliveringTrip.batchSecondaryOrder.restaurantAddress}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                    +0.6 กม. ทางเดียวกัน
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-700 bg-white p-2.5 rounded-lg border border-slate-100">
+                  <strong>รายการอาหารร้านที่ 2:</strong> {activeDeliveringTrip.batchSecondaryOrder.itemsSummary}
+                </div>
+
+                <button
+                  id="rider-step-batch-pickup-2-btn"
+                  onClick={advanceDeliveringStep}
+                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold cursor-pointer transition-colors shadow-xs flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>ถึงร้านที่ 2 & รับอาหารครบ 2 ร้านแล้ว (มุ่งหน้าส่งลูกค้าคนแรก) 🛵🥤</span>
+                </button>
+              </div>
+            )}
+
+            {/* STEP 1 (SINGLE ORDER) OR STEP 2 (BATCH ORDER): Deliver to first customer */}
+            {((!activeDeliveringTrip.isBatch && deliveryStepIndex === 1) || 
+              (activeDeliveringTrip.isBatch && deliveryStepIndex === 2)) && (
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2.5">
                     <User className="w-5 h-5 text-blue-600" />
                     <div>
-                      <div className="text-xs font-black text-slate-900">
-                        {activeDeliveringTrip.customerName}
+                      <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <span>{activeDeliveringTrip.customerName}</span>
+                        {activeDeliveringTrip.isBatch && (
+                          <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">ลูกค้าคนที่ 1</span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-500">
                         {activeDeliveringTrip.customerAddress}
@@ -405,12 +588,17 @@ export const RiderQueueTab: React.FC = () => {
                   className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold cursor-pointer transition-colors shadow-xs flex items-center justify-center gap-2"
                 >
                   <Navigation className="w-4 h-4" />
-                  <span>ยืนยันส่งมอบอาหารสำเร็จ (บันทึก POD & จบงาน) 📍</span>
+                  <span>
+                    {activeDeliveringTrip.isBatch 
+                      ? 'ยืนยันส่งมอบลูกค้าคนแรกสำเร็จ 📍 (มุ่งหน้าไปส่งคนที่ 2)' 
+                      : 'ยืนยันส่งมอบอาหารสำเร็จ (บันทึก POD & จบงาน) 📍'}
+                  </span>
                 </button>
               </div>
             )}
 
-            {deliveryStepIndex === 2 && (
+            {/* STEP 2 (SINGLE ORDER FINAL SCREEN) */}
+            {!activeDeliveringTrip.isBatch && deliveryStepIndex === 2 && (
               <div className="space-y-3">
                 <div className="text-center py-2">
                   <div className="text-3xl mb-1">🎉</div>
@@ -461,9 +649,18 @@ export const RiderQueueTab: React.FC = () => {
                     </span>
                     <span className="font-semibold text-blue-700">+฿{activeDeliveringTrip.distanceFee.toFixed(2)}</span>
                   </div>
+                  {activeDeliveringTrip.rainSurge && activeDeliveringTrip.rainSurge > 0 && (
+                    <div className="flex justify-between text-blue-700">
+                      <span className="flex items-center gap-1">
+                        <CloudRain className="w-3 h-3" />
+                        <span>ค่าเสี่ยงภัยสภาพอากาศ (ฝนตก/พายุ)</span>
+                      </span>
+                      <span className="font-semibold">+฿{activeDeliveringTrip.rainSurge.toFixed(2)}</span>
+                    </div>
+                  )}
                   {activeDeliveringTrip.specialIncentive > 0 && (
                     <div className="flex justify-between text-amber-700">
-                      <span>โบนัสช่วงความต้องการสูง (Rush Hour Surge)</span>
+                      <span>โบนัสช่วงความต้องการสูง & โบนัสระดับเลเวล</span>
                       <span className="font-semibold">+฿{activeDeliveringTrip.specialIncentive.toFixed(2)}</span>
                     </div>
                   )}
@@ -489,6 +686,74 @@ export const RiderQueueTab: React.FC = () => {
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>ยืนยันส่งมอบสำเร็จ & รับเงินเข้ากระเป๋า 💸</span>
+                </button>
+              </div>
+            )}
+
+            {/* STEP 3 (BATCH ORDER FINAL SCREEN) */}
+            {activeDeliveringTrip.isBatch && activeDeliveringTrip.batchSecondaryOrder && deliveryStepIndex === 3 && (
+              <div className="space-y-3">
+                <div className="text-center py-2">
+                  <div className="text-3xl mb-1">🎉 🛵 📦</div>
+                  <h5 className="text-sm font-extrabold text-slate-900">
+                    ส่งมอบงานพ่วงครบ 2 ออเดอร์เรียบร้อยแล้ว!
+                  </h5>
+                  <p className="text-xs text-slate-500">
+                    รับรายได้ 2 ออเดอร์พร้อมโบนัสพ่วงทางเดียวกัน เงินโอนเข้าวอลเล็ตทันที
+                  </p>
+                </div>
+
+                {/* POD 2 Details */}
+                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-900">
+                      ส่งมอบลูกค้าคนที่ 2: {activeDeliveringTrip.batchSecondaryOrder.customerName}
+                    </span>
+                    <span className="text-[10px] font-bold bg-white text-purple-800 px-2 py-0.5 rounded border border-purple-200">
+                      POD สำเร็จ
+                    </span>
+                  </div>
+                  <div className="text-slate-600 text-[11px]">
+                    {activeDeliveringTrip.batchSecondaryOrder.customerAddress}
+                  </div>
+                </div>
+
+                {/* Combined Fare Breakdown */}
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Calculator className="w-3.5 h-3.5 text-purple-600" />
+                      <span>สรุปรายได้รวมงานพ่วง (2 จุดส่ง)</span>
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-600">
+                    <span>ออเดอร์หลัก ({activeDeliveringTrip.orderNumber})</span>
+                    <span className="font-semibold">฿{(activeDeliveringTrip.totalTripEarnings - (activeDeliveringTrip.batchBonus || 38)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-purple-700 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-purple-600" />
+                      <span>งานพ่วงออเดอร์ที่ 2 ({activeDeliveringTrip.batchSecondaryOrder.orderNumber})</span>
+                    </span>
+                    <span>+฿{(activeDeliveringTrip.batchBonus || 38).toFixed(2)}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center font-black text-sm text-slate-900">
+                    <div>
+                      <span>รายได้สุทธิรวม 2 งาน</span>
+                      <span className="text-[10px] text-emerald-600 font-normal block">นับผลงาน 2 ทริปสะสมเลเวล</span>
+                    </div>
+                    <span className="text-purple-700 text-xl font-black">฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button
+                  id="rider-step-complete-batch-trip-btn"
+                  onClick={advanceDeliveringStep}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-700 hover:to-teal-700 text-white text-xs font-black cursor-pointer transition-all shadow-md flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>รับเงินรวม ฿{activeDeliveringTrip.totalTripEarnings.toFixed(2)} เข้ากระเป๋าทันที 💸</span>
                 </button>
               </div>
             )}
@@ -719,6 +984,14 @@ export const RiderQueueTab: React.FC = () => {
         isOpen={isFareModalOpen}
         onClose={() => setIsFareModalOpen(false)}
         initialDistanceKm={fareModalDistance}
+      />
+
+      {/* IN-TRIP BATCH DELIVERY OFFER POPUP MODAL */}
+      <RiderBatchOfferModal
+        isOpen={Boolean(activeBatchOffer)}
+        offer={activeBatchOffer}
+        onAccept={acceptInTripBatchOffer}
+        onDecline={declineInTripBatchOffer}
       />
     </div>
   );

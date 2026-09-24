@@ -32,7 +32,11 @@ import {
   AdminRole,
   PlatformSystemConfig,
   AdminDisputeTicket,
-  MerchantStaffRole
+  MerchantStaffRole,
+  BatchSecondaryOrder,
+  RiderTier,
+  RiderWeatherMode,
+  RiderDailyQuest
 } from '../types';
 import {
   INITIAL_PLATFORM_CONFIG,
@@ -68,7 +72,9 @@ import {
   INITIAL_ZONE_QUEUE,
   INITIAL_DISPATCH_ORDERS,
   INITIAL_RIDER_EARNINGS_HISTORY,
-  INITIAL_RIDER_PAYOUT_SLIPS
+  INITIAL_RIDER_PAYOUT_SLIPS,
+  INITIAL_RIDER_QUESTS,
+  RIDER_TIERS_CONFIG
 } from '../data/riderData';
 import { TRANSLATIONS, Language } from '../data/translations';
 import { createCloudOrder, subscribeToOrders } from '../lib/firebase';
@@ -249,6 +255,14 @@ interface AppContextType {
   riderIssues: RiderReportedIssue[];
   reportRiderIssue: (issue: Omit<RiderReportedIssue, 'id' | 'reportedAt' | 'status'>) => RiderReportedIssue;
   resolveRiderIssue: (issueId: string, note?: string) => void;
+  riderWeatherMode: RiderWeatherMode;
+  setRiderWeatherMode: (mode: RiderWeatherMode) => void;
+  riderQuests: RiderDailyQuest[];
+  claimRiderQuestReward: (questId: string) => void;
+  activeBatchOffer: BatchSecondaryOrder | null;
+  triggerInTripBatchOffer: () => void;
+  acceptInTripBatchOffer: () => void;
+  declineInTripBatchOffer: () => void;
   
   // Modals & Popups
   isCartOpen: boolean;
@@ -1012,6 +1026,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeDeliveringTrip, setActiveDeliveringTrip] = useState<DispatchQueueOrder | null>(null);
   const [deliveryStepIndex, setDeliveryStepIndex] = useState<number>(0);
 
+  // Rider Weather Mode & Surcharge Switch (☀️ clear, 🌦️ rain, ⛈️ storm)
+  const [riderWeatherMode, setRiderWeatherModeState] = useState<RiderWeatherMode>('clear');
+
+  // Rider Daily Quests & Challenges
+  const [riderQuests, setRiderQuests] = useState<RiderDailyQuest[]>(INITIAL_RIDER_QUESTS);
+
+  // In-trip Batch Delivery Offer
+  const [activeBatchOffer, setActiveBatchOffer] = useState<BatchSecondaryOrder | null>(null);
+
   // Audio chime synthesizer for rider alerts & payouts
   const playRiderChime = useCallback((type: 'dispatch_alert' | 'cash_payout' | 'step_done') => {
     try {
@@ -1261,15 +1284,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const advanceDeliveringStep = useCallback(() => {
     if (!activeDeliveringTrip) return;
 
-    if (deliveryStepIndex < 2) {
+    const isBatch = Boolean(activeDeliveringTrip.isBatch && activeDeliveringTrip.batchSecondaryOrder);
+    const maxSteps = isBatch ? 3 : 2;
+
+    if (deliveryStepIndex < maxSteps) {
       const nextStep = deliveryStepIndex + 1;
       setDeliveryStepIndex(nextStep);
       playRiderChime('step_done');
 
-      if (nextStep === 1) {
-        triggerToast('รับอาหารจากร้านเรียบร้อย 🥡', `กำลังเดินทางไปส่งที่ ${activeDeliveringTrip.customerName}`, 'info');
-      } else if (nextStep === 2) {
-        triggerToast('ถึงที่หมายของลูกค้าแล้ว 📍', 'กำลังส่งมอบอาหารและตรวจสอบการรับสินค้า', 'info');
+      if (!isBatch) {
+        if (nextStep === 1) {
+          triggerToast('รับอาหารจากร้านเรียบร้อย 🥡', `กำลังเดินทางไปส่งที่ ${activeDeliveringTrip.customerName}`, 'info');
+        } else if (nextStep === 2) {
+          triggerToast('ถึงที่หมายของลูกค้าแล้ว 📍', 'กำลังส่งมอบอาหารและตรวจสอบการรับสินค้า', 'info');
+        }
+      } else {
+        if (nextStep === 1) {
+          triggerToast('รับร้านแรกสำเร็จ! 🥡', `มุ่งหน้าไปรับร้านที่ 2: ${activeDeliveringTrip.batchSecondaryOrder?.restaurantName}`, 'info');
+        } else if (nextStep === 2) {
+          triggerToast('รับอาหารครบ 2 ร้านแล้ว! 🛵', `กำลังมุ่งหน้าส่งลูกค้าคนแรก: ${activeDeliveringTrip.customerName}`, 'info');
+        } else if (nextStep === 3) {
+          triggerToast('ส่งลูกค้ารายแรกสำเร็จ! 📍', `มุ่งหน้าส่งมอบลูกค้ารายที่ 2: ${activeDeliveringTrip.batchSecondaryOrder?.customerName}`, 'info');
+        }
       }
     } else {
       // Complete delivery trip!
@@ -1278,14 +1314,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const newRecord: RiderTripEarningRecord = {
         id: `earn_${Date.now()}`,
-        orderId: trip.orderNumber,
-        restaurantName: trip.restaurantName,
-        customerName: trip.customerName,
-        distanceKm: trip.distanceKm,
+        orderId: isBatch && trip.batchSecondaryOrder ? `${trip.orderNumber} + ${trip.batchSecondaryOrder.orderNumber} (พ่วง)` : trip.orderNumber,
+        restaurantName: isBatch && trip.batchSecondaryOrder ? `${trip.restaurantName} & ${trip.batchSecondaryOrder.restaurantName}` : trip.restaurantName,
+        customerName: isBatch && trip.batchSecondaryOrder ? `${trip.customerName} & ${trip.batchSecondaryOrder.customerName}` : trip.customerName,
+        distanceKm: trip.distanceKm + (trip.batchSecondaryOrder?.extraDistanceKm || 0),
         completedAt: 'เมื่อสักครู่',
         baseFee: trip.baseDeliveryFee,
         distanceFee: trip.distanceFee,
-        peakBonus: trip.specialIncentive,
+        peakBonus: trip.specialIncentive + (trip.batchBonus || 0),
         tipAmount: trip.customerTip,
         grossEarnings: earningsAmount,
         netEarnings: earningsAmount,
@@ -1298,8 +1334,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...prev,
         walletBalance: prev.walletBalance + earningsAmount,
         totalEarnedToday: prev.totalEarnedToday + earningsAmount,
-        todayTripsCount: prev.todayTripsCount + 1,
-        totalLifetimeTrips: prev.totalLifetimeTrips + 1,
+        todayTripsCount: prev.todayTripsCount + (isBatch ? 2 : 1),
+        totalLifetimeTrips: prev.totalLifetimeTrips + (isBatch ? 2 : 1),
         totalLifetimeEarnings: prev.totalLifetimeEarnings + earningsAmount,
         shiftStatus: 'in_queue',
         currentQueuePosition: 3,
@@ -1312,29 +1348,108 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       playRiderChime('cash_payout');
       try {
         confetti({
-          particleCount: 90,
-          spread: 75,
+          particleCount: isBatch ? 140 : 90,
+          spread: isBatch ? 90 : 75,
           origin: { y: 0.6 },
-          colors: ['#10B981', '#34D399', '#F59E0B', '#3B82F6']
+          colors: ['#10B981', '#34D399', '#F59E0B', '#3B82F6', '#8B5CF6']
         });
       } catch {
         // safe
       }
 
       addNotification({
-        title: '💸 ยอดเงินเข้าวอลเล็ตไรเดอร์!',
-        body: `การจัดส่งออเดอร์ ${trip.orderNumber} สำเร็จ รับเงินสุทธิ ฿${earningsAmount.toFixed(2)} (รวมทิป ฿${trip.customerTip}) พร้อมถอนได้ทันที`,
+        title: isBatch ? '💸 ยอดเงินทริปพ่วงเข้าวอลเล็ต!' : '💸 ยอดเงินเข้าวอลเล็ตไรเดอร์!',
+        body: `การจัดส่งออเดอร์ ${trip.orderNumber} ${isBatch ? 'และงานพ่วง ' : ''}สำเร็จ รับเงินสุทธิ ฿${earningsAmount.toFixed(2)} พร้อมถอนได้ทันที`,
         type: 'reward',
         badge: '+฿' + earningsAmount.toFixed(0),
       });
 
       triggerToast(
-        'จัดส่งสำเร็จ! รับเงินเข้ากระเป๋า 💸',
+        isBatch ? 'จัดส่งงานพ่วงสำเร็จ 2 รายการ! 💸🛵' : 'จัดส่งสำเร็จ! รับเงินเข้ากระเป๋า 💸',
         `เพิ่มเงิน ฿${earningsAmount.toFixed(2)} เข้าสู่วอลเล็ตไรเดอร์เรียบร้อยแล้ว`,
         'reward'
       );
     }
   }, [activeDeliveringTrip, deliveryStepIndex, playRiderChime]);
+
+  // Set Rider Weather Mode
+  const setRiderWeatherMode = useCallback((mode: RiderWeatherMode) => {
+    setRiderWeatherModeState(mode);
+    if (mode === 'clear') {
+      triggerToast('☀️ โหมดสภาพอากาศปกติ', 'ค่ารอบมาตรฐานตามระยะทางจริง', 'info');
+    } else if (mode === 'rain') {
+      triggerToast('🌦️ เปิดโหมดฝนตก (+฿15/งาน)', 'เพิ่มค่าเสี่ยงภัยสภาพอากาศ ฿15 ทุกออเดอร์ กรุณาขับขี่ปลอดภัย', 'warning');
+    } else if (mode === 'storm') {
+      triggerToast('⛈️ เปิดโหมดพายุฝนฟ้าคะนอง (+฿25/งาน)', 'เพิ่มโบนัสพิเศษ ฿25 และคำแนะนำถนนลื่น ขับขี่ด้วยความระมัดระวังสูงสุด', 'warning');
+    }
+  }, []);
+
+  // Claim Rider Quest Reward
+  const claimRiderQuestReward = useCallback((questId: string) => {
+    const quest = riderQuests.find(q => q.id === questId);
+    if (!quest || quest.claimed) return;
+
+    setRiderQuests(prev => prev.map(q => q.id === questId ? { ...q, claimed: true } : q));
+    setActiveRider(prev => ({
+      ...prev,
+      walletBalance: prev.walletBalance + quest.bonusBaht,
+      totalEarnedToday: prev.totalEarnedToday + quest.bonusBaht,
+    }));
+
+    playRiderChime('cash_payout');
+    triggerToast(
+      'รับเงินโบนัสสำเร็จ! 💸',
+      `โอนเงินโบนัส ฿${quest.bonusBaht} เข้าสู่วอลเล็ตเรียบร้อยแล้ว`,
+      'reward'
+    );
+  }, [riderQuests, playRiderChime]);
+
+  // Trigger simulated in-trip stacked batch offer
+  const triggerInTripBatchOffer = useCallback(() => {
+    if (!activeDeliveringTrip) {
+      triggerToast('ไม่มีงานจัดส่งขณะนี้', 'ฟังก์ชันงานพ่วงใช้งานได้เมื่อคุณกำลังนำส่งออเดอร์', 'info');
+      return;
+    }
+    const secondaryOffer: BatchSecondaryOrder = {
+      id: `batch_${Date.now()}`,
+      orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+      restaurantName: 'KOI Thé ชานมไข่มุก (เอกมัย)',
+      restaurantAddress: 'ห่างจากจุดรับแรก 250 ม. (ปากซอยสุขุมวิท 63)',
+      customerName: 'คุณพิมพา สุขใจ',
+      customerPhone: '081-224-5566',
+      customerAddress: `${activeDeliveringTrip.customerAddress} (ชั้น 12)`,
+      itemsSummary: 'Golden Bubble Milk Tea (L) x2',
+      itemsCount: 2,
+      addedEarnings: 38.00,
+      extraDistanceKm: 0.6,
+    };
+    setActiveBatchOffer(secondaryOffer);
+    playRiderChime('dispatch_alert');
+    triggerToast('⚡ มีงานพ่วงทางเดียวกันเสนอเข้ามา!', 'รับเพิ่ม ฿38.00 ร้านและจุดส่งทางเดียวกัน กดตอบรับด่วน', 'reward');
+  }, [activeDeliveringTrip, playRiderChime]);
+
+  const acceptInTripBatchOffer = useCallback(() => {
+    if (!activeBatchOffer || !activeDeliveringTrip) return;
+    const addedAmount = activeBatchOffer.addedEarnings;
+    setActiveDeliveringTrip(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        isBatch: true,
+        batchBonus: addedAmount,
+        batchSecondaryOrder: activeBatchOffer,
+        totalTripEarnings: prev.totalTripEarnings + addedAmount,
+      };
+    });
+    setActiveBatchOffer(null);
+    playRiderChime('step_done');
+    triggerToast('รับงานพ่วงสำเร็จ! 📦🛵', `รวมออเดอร์เป็น 4 จุดรับส่ง รายได้รวมเพิ่มเป็น ฿${(activeDeliveringTrip.totalTripEarnings + addedAmount).toFixed(2)}`, 'success');
+  }, [activeBatchOffer, activeDeliveringTrip, playRiderChime]);
+
+  const declineInTripBatchOffer = useCallback(() => {
+    setActiveBatchOffer(null);
+    triggerToast('ปฏิเสธงานพ่วงแล้ว', 'ดำเนินงานจัดส่งออเดอร์เดี่ยวตามปกติ', 'info');
+  }, []);
 
   // Report issue from rider (via voice recognition or hands-free console)
   const reportRiderIssue = useCallback((issueData: Omit<RiderReportedIssue, 'id' | 'reportedAt' | 'status'>) => {
@@ -1472,13 +1587,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const incentive = currentZone.surgeBonusPerTrip;
     const tip = [0, 15, 20, 30, 40][Math.floor(Math.random() * 5)];
 
+    // Weather rain surcharge
+    let rainSurge = 0;
+    if (riderWeatherMode === 'rain') rainSurge = 15;
+    else if (riderWeatherMode === 'storm') rainSurge = 25;
+
     // Calculate rider fare using real Thai distance standard
     const thaiFare = calculateThaiRiderFare({
       distanceKm: distance,
       zoneType: currentZone.surgeBonusPerTrip > 0 ? 'bkk_cbd' : 'bkk_metro',
       isPeakHour: incentive > 0,
       customerTip: tip,
+      isRaining: riderWeatherMode !== 'clear',
+      rainSurgeAmount: rainSurge,
     });
+
+    // Rider Tier Bonus (Bronze: 0%, Silver: 3%, Gold: 6%, Platinum: 10%)
+    const currentTier = activeRider.tier || 'gold';
+    const tierBonusPercent = RIDER_TIERS_CONFIG[currentTier]?.earningBonusPercent || 0;
+    const tierBonusAmount = Number(((thaiFare.totalRiderEarnings * tierBonusPercent) / 100).toFixed(2));
+    const finalEarnings = Number((thaiFare.totalRiderEarnings + tierBonusAmount).toFixed(2));
 
     const newOffer: DispatchQueueOrder = {
       id: simulatedOrderId,
@@ -1497,9 +1625,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       itemsSummary: `${randomRest?.menu?.[0]?.name || 'ชุดอาหารพิเศษ'} x1, เครื่องดื่ม x1`,
       baseDeliveryFee: thaiFare.baseFare,
       distanceFee: thaiFare.distanceFee,
-      specialIncentive: thaiFare.peakSurgeFee + thaiFare.longDistanceSubsidy,
+      specialIncentive: thaiFare.peakSurgeFee + thaiFare.longDistanceSubsidy + tierBonusAmount,
+      rainSurge: rainSurge,
       customerTip: tip,
-      totalTripEarnings: thaiFare.totalRiderEarnings,
+      totalTripEarnings: finalEarnings,
       matchedZone: currentZone.name,
       status: 'offered',
       offeredToRiderId: activeRider.id,
@@ -1515,17 +1644,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     addNotification({
       title: '🚨 มีออเดอร์ใหม่เสนอให้คุณ (คิดตามระยะทางจริง)!',
-      body: `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${thaiFare.totalRiderEarnings.toFixed(2)} (ฐาน ฿${thaiFare.baseFare} + ระยะเกิน ฿${thaiFare.distanceFee}${tip > 0 ? ` + ทิป ฿${tip}` : ''})`,
+      body: `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${finalEarnings.toFixed(2)} (ฐาน ฿${thaiFare.baseFare} + ค่าระยะ ฿${thaiFare.distanceFee}${rainSurge > 0 ? ` + เสี่ยงภัยฝน ฿${rainSurge}` : ''}${tierBonusAmount > 0 ? ` + โบนัสระดับ ${currentTier} ฿${tierBonusAmount}` : ''}${tip > 0 ? ` + ทิป ฿${tip}` : ''})`,
       type: 'order',
       badge: 'ออเดอร์ใหม่',
     });
 
     triggerToast(
       '🚨 มีออเดอร์ใหม่เข้ามาในคิวของคุณ!',
-      `ร้าน ${randomRest.name} (${distance} กม.) รายได้รอบนี้ ฿${thaiFare.totalRiderEarnings.toFixed(2)} ตอบรับเลย!`,
+      `ร้าน ${randomRest.name} (${distance} กม.) รายได้รวม ฿${finalEarnings.toFixed(2)}${rainSurge > 0 ? ` (รวมโบนัสฝนตก +฿${rainSurge})` : ''} ตอบรับเลย!`,
       'reward'
     );
-  }, [selectedZoneId, deliveryZones, activeRider.id, playRiderChime]);
+  }, [selectedZoneId, deliveryZones, activeRider.id, activeRider.tier, riderWeatherMode, playRiderChime]);
 
   // Modals & Popups
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -2717,6 +2846,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       riderIssues,
       reportRiderIssue,
       resolveRiderIssue,
+      riderWeatherMode,
+      setRiderWeatherMode,
+      riderQuests,
+      claimRiderQuestReward,
+      activeBatchOffer,
+      triggerInTripBatchOffer,
+      acceptInTripBatchOffer,
+      declineInTripBatchOffer,
       isCartOpen,
       setIsCartOpen,
       isQuickCartPopupOpen,

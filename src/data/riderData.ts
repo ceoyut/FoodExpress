@@ -4,8 +4,138 @@ import {
   RiderQueueItem, 
   DispatchQueueOrder, 
   RiderTripEarningRecord, 
-  RiderPayoutSlip 
+  RiderPayoutSlip,
+  RiderTier,
+  RiderTierConfig,
+  RiderDailyQuest
 } from '../types';
+
+export const RIDER_TIERS_CONFIG: Record<RiderTier, RiderTierConfig> = {
+  bronze: {
+    id: 'bronze',
+    titleTh: 'บรอนซ์ (Bronze Rider)',
+    badgeEmoji: '🥉',
+    badgeBg: 'bg-amber-700/10 text-amber-900',
+    badgeText: 'text-amber-800',
+    borderClass: 'border-amber-700/30',
+    minMonthlyTrips: 0,
+    minAcceptanceRate: 75,
+    minRating: 4.5,
+    earningBonusPercent: 0,
+    earlyDispatchSeconds: 0,
+    insuranceCoverageTh: 'วงเงินคุ้มครอง 50,000 บาท',
+    perks: [
+      'อัตราค่ารอบมาตรฐานตามระยะทางจริง',
+      'ถอนเงินเข้าบัญชีฟรีวันละ 1 ครั้ง',
+      'ประกันอุบัติเหตุกลุ่มขั้นพื้นฐาน',
+    ]
+  },
+  silver: {
+    id: 'silver',
+    titleTh: 'ซิลเวอร์ (Silver Pro)',
+    badgeEmoji: '🥈',
+    badgeBg: 'bg-slate-200 text-slate-800',
+    badgeText: 'text-slate-800',
+    borderClass: 'border-slate-300',
+    minMonthlyTrips: 60,
+    minAcceptanceRate: 85,
+    minRating: 4.70,
+    earningBonusPercent: 3,
+    earlyDispatchSeconds: 3,
+    insuranceCoverageTh: 'วงเงินคุ้มครอง 100,000 บาท',
+    perks: [
+      'โบนัสเพิ่มพิเศษ +3% ทุกค่ารอบ',
+      'ระบบเห็นงานเร็วกว่า 3 วินาที (Fast Dispatch)',
+      'ถอนเงินเข้าบัญชีฟรีวันละ 2 ครั้ง',
+      'เพิ่มวงเงินประกันอุบัติเหตุเป็น 100,000 บาท',
+    ]
+  },
+  gold: {
+    id: 'gold',
+    titleTh: 'โกลด์ (Gold Master)',
+    badgeEmoji: '🥇',
+    badgeBg: 'bg-amber-100 text-amber-900',
+    badgeText: 'text-amber-800 font-black',
+    borderClass: 'border-amber-400',
+    minMonthlyTrips: 150,
+    minAcceptanceRate: 92,
+    minRating: 4.85,
+    earningBonusPercent: 6,
+    earlyDispatchSeconds: 5,
+    insuranceCoverageTh: 'วงเงินคุ้มครอง 250,000 บาท',
+    perks: [
+      'โบนัสเพิ่มพิเศษ +6% ทุกค่ารอบ',
+      'สิทธิ์รับงานก่อนไรเดอร์ทั่วไป 5 วินาที',
+      'ถอนเงินฟรีไม่จำกัดจำนวนครั้งผ่าน PromptPay',
+      'ประกันอุบัติเหตุ + ชดเชยรายได้รายวัน 250,000 บาท',
+      'ตราสัญลักษณ์ดาวทองบนโปรไฟล์คนขับ',
+    ]
+  },
+  platinum: {
+    id: 'platinum',
+    titleTh: 'แพลตินัม ฮีโร่ (Platinum Hero)',
+    badgeEmoji: '👑',
+    badgeBg: 'bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-900',
+    badgeText: 'text-purple-900 font-black',
+    borderClass: 'border-purple-400',
+    minMonthlyTrips: 250,
+    minAcceptanceRate: 98,
+    minRating: 4.95,
+    earningBonusPercent: 10,
+    earlyDispatchSeconds: 8,
+    insuranceCoverageTh: 'วงเงินคุ้มครองสูงสุด 500,000 บาท',
+    perks: [
+      'โบนัสเพิ่มสูงสุด +10% ทุกค่ารอบ!',
+      'Priority Dispatch ขั้นสูงสุด รับงานก่อน 8 วินาที',
+      'สายด่วน VIP Concierge Hotline 24 ชม.',
+      'วงเงินประกันอุบัติเหตุเต็มรูปแบบ 500,000 บาท',
+      'ฟรีแพ็กเกจชุดยูนิฟอร์มและกล่องใส่อาหารพรีเมียมประจำปี',
+    ]
+  }
+};
+
+export const INITIAL_RIDER_QUESTS: RiderDailyQuest[] = [
+  {
+    id: 'quest_1',
+    title: 'วิ่งส่งอาหารในโซนสุขุมวิท ครบ 5 งาน',
+    targetCount: 5,
+    currentCount: 4,
+    bonusBaht: 50,
+    completed: false,
+    claimed: false,
+    iconEmoji: '🛵',
+  },
+  {
+    id: 'quest_2',
+    title: 'รักษาคะแนนรีวิว 5 ดาว ติดต่อกัน 3 งาน',
+    targetCount: 3,
+    currentCount: 3,
+    bonusBaht: 35,
+    completed: true,
+    claimed: false,
+    iconEmoji: '⭐',
+  },
+  {
+    id: 'quest_3',
+    title: 'เปิดรับงานในโหมดสภาพอากาศฝนตก 2 งาน',
+    targetCount: 2,
+    currentCount: 1,
+    bonusBaht: 40,
+    completed: false,
+    claimed: false,
+    iconEmoji: '🌧️',
+  },
+  {
+    id: 'quest_4',
+    title: 'ถ่ายภาพหลักฐานการส่งมอบ (POD) ครบ 8 งาน',
+    targetCount: 8,
+    currentCount: 8,
+    bonusBaht: 45,
+    completed: true,
+    claimed: true,
+    iconEmoji: '📸',
+  },
+];
 
 export interface DeliveryZone {
   id: string;
@@ -92,6 +222,7 @@ export const INITIAL_ACTIVE_RIDER: ActiveRiderAccount = {
   currentQueuePosition: 1,
   totalInQueueCount: 6,
   applicationStatus: 'approved',
+  tier: 'gold',
 };
 
 export const INITIAL_RIDER_APPLICATIONS: RiderApplication[] = [

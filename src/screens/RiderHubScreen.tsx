@@ -5,6 +5,9 @@ import { RiderQueueTab } from '../components/rider/RiderQueueTab';
 import { RiderPayoutTab } from '../components/rider/RiderPayoutTab';
 import { RiderHeatmapTab } from '../components/rider/RiderHeatmapTab';
 import { RiderSafetyTab } from '../components/rider/RiderSafetyTab';
+import { RiderTierQuestsModal } from '../components/rider/RiderTierQuestsModal';
+import { RIDER_TIERS_CONFIG } from '../data/riderData';
+import { RiderWeatherMode } from '../types';
 import { 
   Bike, 
   UserPlus, 
@@ -17,7 +20,12 @@ import {
   Bell,
   Flame,
   ShieldAlert,
-  Layers
+  Layers,
+  Award,
+  CloudRain,
+  Sun,
+  CloudLightning,
+  Gift
 } from 'lucide-react';
 
 export const RiderHubScreen: React.FC = () => {
@@ -25,16 +33,24 @@ export const RiderHubScreen: React.FC = () => {
     activeRider, 
     setActiveTab, 
     activeIncomingTrip,
-    triggerSimulatedIncomingOrder
+    triggerSimulatedIncomingOrder,
+    riderWeatherMode,
+    setRiderWeatherMode,
+    riderQuests
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'queue' | 'heatmap' | 'payout' | 'safety' | 'registration'>('queue');
+  const [isTierModalOpen, setIsTierModalOpen] = useState<boolean>(false);
+
+  const currentTierId = activeRider.tier || 'gold';
+  const currentTierConfig = RIDER_TIERS_CONFIG[currentTierId];
+  const unclaimedQuestsCount = riderQuests.filter(q => q.completed && !q.claimed).length;
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-20">
       {/* Top App Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               id="rider-hub-back-home-btn"
@@ -59,27 +75,87 @@ export const RiderHubScreen: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  รับงานสด • ฮอตสปอตงานพ่วง • กระเป๋าเงินคู่ • ช่วยเหลือฉุกเฉิน SOS • เอกสารคนขับ
+                  รับงานสด • นำทาง GPS • งานพ่วงอัตโนมัติ • โหมดฝนตก • เลเวลและภารกิจ
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Quick Active Rider Badge */}
-          <div className="flex items-center gap-2.5">
-            <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-black text-slate-800">{activeRider.name}</span>
-              <span className="text-[10px] text-slate-500">
-                วอลเล็ต: <strong className="text-emerald-600 font-bold">฿{activeRider.walletBalance.toFixed(2)}</strong>
-              </span>
+          {/* Controls: Weather Mode Switcher, Tier Status & Simulated Order */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap justify-end">
+            {/* Weather Mode Surcharge Toggle */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setRiderWeatherMode('clear')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
+                  riderWeatherMode === 'clear'
+                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="สภาพอากาศปกติ"
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">ปกติ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRiderWeatherMode('rain')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
+                  riderWeatherMode === 'rain'
+                    ? 'bg-blue-500 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="โหมดฝนตก (+฿15 ทุกงาน)"
+              >
+                <CloudRain className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">ฝนตก (+฿15)</span>
+                <span className="md:hidden">+฿15</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRiderWeatherMode('storm')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
+                  riderWeatherMode === 'storm'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="โหมดพายุฝน (+฿25 ทุกงาน)"
+              >
+                <CloudLightning className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">พายุ (+฿25)</span>
+                <span className="md:hidden">+฿25</span>
+              </button>
             </div>
 
+            {/* Rider Tier & Daily Quests Button */}
+            <button
+              id="rider-hub-tier-quests-btn"
+              onClick={() => setIsTierModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs relative"
+              title="ดูระดับเลเวล สิทธิประโยชน์ และภารกิจสะสมแต้ม"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-600" />
+              <span>{currentTierConfig.badgeEmoji} {currentTierConfig.titleTh.split(' ')[0]}</span>
+              {currentTierConfig.earningBonusPercent > 0 && (
+                <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-1 rounded">
+                  +{currentTierConfig.earningBonusPercent}%
+                </span>
+              )}
+              {unclaimedQuestsCount > 0 && (
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping absolute -top-1 -right-1" />
+              )}
+            </button>
+
+            {/* Simulated Incoming Order Button */}
             <button
               id="rider-hub-sim-incoming-btn"
               onClick={triggerSimulatedIncomingOrder}
-              className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
-              <Bell className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+              <Bell className="w-3.5 h-3.5 animate-bounce" />
               <span className="hidden sm:inline">จำลองออเดอร์เข้า</span>
               <span className="sm:hidden">ยิงงาน</span>
             </button>
@@ -99,7 +175,7 @@ export const RiderHubScreen: React.FC = () => {
               }`}
             >
               <ListOrdered className="w-4 h-4" />
-              <span>1. คิว & รับงานสด</span>
+              <span>1. คิว & รับงานสด (GPS & งานพ่วง)</span>
               {activeIncomingTrip && (
                 <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
               )}
@@ -168,6 +244,12 @@ export const RiderHubScreen: React.FC = () => {
         {activeSubTab === 'safety' && <RiderSafetyTab />}
         {activeSubTab === 'registration' && <RiderRegistrationTab />}
       </main>
+
+      {/* Rider Tier & Quests Modal */}
+      <RiderTierQuestsModal
+        isOpen={isTierModalOpen}
+        onClose={() => setIsTierModalOpen(false)}
+      />
     </div>
   );
 };
