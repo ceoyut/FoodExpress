@@ -835,7 +835,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [restaurantList, setRestaurantList] = useState<Restaurant[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RESTAURANTS);
-      return saved ? JSON.parse(saved) : RESTAURANTS_DATA;
+      if (saved) {
+        const parsed: Restaurant[] = JSON.parse(saved);
+        // Ensure any new restaurants in RESTAURANTS_DATA not in saved are included seamlessly
+        const existingIds = new Set(parsed.map(r => r.id));
+        const missing = RESTAURANTS_DATA.filter(r => !existingIds.has(r.id));
+        if (missing.length > 0) {
+          const merged = [...parsed, ...missing];
+          try {
+            localStorage.setItem(STORAGE_KEYS.RESTAURANTS, JSON.stringify(merged));
+          } catch {
+            // ignore
+          }
+          return merged;
+        }
+        return parsed;
+      }
+      return RESTAURANTS_DATA;
     } catch {
       return RESTAURANTS_DATA;
     }

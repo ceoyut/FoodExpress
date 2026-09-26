@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { RestaurantSortOption, UserGeoLocation } from '../types';
 import { 
-  BANGKOK_BENCHMARK_LOCATIONS, 
+  BANGKOK_BENCHMARK_LOCATIONS,
+  KORAT_BENCHMARK_LOCATIONS,
+  ALL_BENCHMARK_LOCATIONS,
   BenchmarkLocation,
   formatDistance 
 } from '../utils/geolocation';
@@ -54,6 +56,7 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showRadiusFilter, setShowRadiusFilter] = useState(false);
   const [isSlaModalOpen, setIsSlaModalOpen] = useState(false);
+  const [provinceTab, setProvinceTab] = useState<'all' | 'korat' | 'bangkok'>('all');
 
   const handleSelectBenchmark = (bench: BenchmarkLocation) => {
     const updated: UserGeoLocation = {
@@ -169,50 +172,101 @@ export const LocationSortControl: React.FC<LocationSortControlProps> = ({
       {/* Location Picker Dropdown Card */}
       {showLocationPicker && (
         <div className="mt-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
             <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              เลือกจุดทดสอบพิกัดในกรุงเทพฯ (จำลองตำแหน่งของคุณ):
+              เลือกจุดทดสอบพิกัด (จำลองตำแหน่งของผู้ใช้งาน):
             </span>
-            <span className="text-[11px] text-slate-400">คลิกเพื่อดูการเรียงลำดับร้านค้าใหม่</span>
+            {/* Province Toggle Tabs */}
+            <div className="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-lg text-[11px] font-semibold self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setProvinceTab('all')}
+                className={`px-2 py-0.5 rounded-md transition-all ${
+                  provinceTab === 'all'
+                    ? 'bg-white text-slate-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                ทั้งหมด
+              </button>
+              <button
+                type="button"
+                onClick={() => setProvinceTab('korat')}
+                className={`px-2 py-0.5 rounded-md transition-all flex items-center gap-1 ${
+                  provinceTab === 'korat'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-amber-800 hover:text-amber-900'
+                }`}
+              >
+                <span>🌾 โคราช (5 ร้าน)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProvinceTab('bangkok')}
+                className={`px-2 py-0.5 rounded-md transition-all ${
+                  provinceTab === 'bangkok'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                กรุงเทพฯ
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {BANGKOK_BENCHMARK_LOCATIONS.map(bench => {
-              const isSelected = !userLocation.isLiveGPS && Math.abs(userLocation.lat - bench.lat) < 0.001;
-              return (
-                <button
-                  key={bench.id}
-                  id={`benchmark-loc-${bench.id}`}
-                  onClick={() => handleSelectBenchmark(bench)}
-                  className={`p-2.5 text-left rounded-xl border transition-all flex items-start justify-between gap-2 ${
-                    isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                      : 'bg-white hover:bg-emerald-50/60 text-slate-800 border-slate-200 hover:border-emerald-300'
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold truncate">
-                      {bench.name}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+            {ALL_BENCHMARK_LOCATIONS
+              .filter(bench => {
+                if (provinceTab === 'korat') return bench.province === 'korat';
+                if (provinceTab === 'bangkok') return bench.province === 'bangkok';
+                return true;
+              })
+              .map(bench => {
+                const isSelected = !userLocation.isLiveGPS && Math.abs(userLocation.lat - bench.lat) < 0.001;
+                const isKorat = bench.province === 'korat';
+                return (
+                  <button
+                    key={bench.id}
+                    id={`benchmark-loc-${bench.id}`}
+                    onClick={() => handleSelectBenchmark(bench)}
+                    className={`p-2.5 text-left rounded-xl border transition-all flex items-start justify-between gap-2 ${
+                      isSelected
+                        ? isKorat
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : isKorat
+                          ? 'bg-white hover:bg-amber-50/60 text-slate-800 border-amber-200/80 hover:border-amber-400'
+                          : 'bg-white hover:bg-emerald-50/60 text-slate-800 border-slate-200 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold truncate flex items-center gap-1.5">
+                        {isKorat && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${isSelected ? 'bg-amber-700 text-amber-100' : 'bg-amber-100 text-amber-800'}`}>
+                            โคราช
+                          </span>
+                        )}
+                        <span>{bench.name}</span>
+                      </div>
+                      <div className={`text-[11px] truncate mt-0.5 ${isSelected ? (isKorat ? 'text-amber-100' : 'text-emerald-100') : 'text-slate-500'}`}>
+                        {bench.description}
+                      </div>
                     </div>
-                    <div className={`text-[11px] truncate ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
-                      {bench.description}
-                    </div>
-                  </div>
-                  {isSelected && <Check className="w-4 h-4 text-white shrink-0 mt-0.5" />}
-                </button>
-              );
-            })}
+                    {isSelected && <Check className="w-4 h-4 text-white shrink-0 mt-0.5" />}
+                  </button>
+                );
+              })}
           </div>
 
-          <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500">
+          <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500">
             <span className="flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-slate-400" />
-              ร้านอาหารในระบบอยู่ในโซน สุขุมวิท 23, 31, 49, ทองหล่อ 10, และเอกมัย 12
+              <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              ร้านอาหารในระบบ: โซนกรุงเทพฯ (สุขุมวิท/ทองหล่อ/เอกมัย) & จังหวัดนครราชสีมา (สืบศิริ, ด่านเกวียน, ประโดก, เขาใหญ่, มิตรภาพ)
             </span>
             <button
               onClick={handleFetchLiveGPS}
-              className="text-emerald-600 font-bold hover:underline"
+              className="text-emerald-600 font-bold hover:underline shrink-0"
             >
               ใช้ GPS จริงจากเครื่อง
             </button>

@@ -20,10 +20,64 @@ export interface BenchmarkLocation {
   name: string;
   nameEn: string;
   district: string;
+  province?: 'bangkok' | 'korat';
   lat: number;
   lng: number;
   description: string;
 }
+
+export const KORAT_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
+  {
+    id: 'korat_yamo',
+    name: 'ลานย่าโม (อนุสาวรีย์ท้าวสุรนารี)',
+    nameEn: 'Thao Suranari (Ya Mo) Monument',
+    district: 'อ.เมืองนครราชสีมา',
+    province: 'korat',
+    lat: 14.9738,
+    lng: 102.0978,
+    description: 'ใจกลางเมืองโคราช ใกล้ครัวสุวิมล (2.6 กม.) และปลาเผาสืบศิริ (3.4 กม.)',
+  },
+  {
+    id: 'korat_suebsiri',
+    name: 'ถ.สืบศิริ / ร่วมเริงไชย (ในเมืองโคราช)',
+    nameEn: 'Sueb Siri Rd / Ruam Roeng Chai',
+    district: 'อ.เมืองนครราชสีมา',
+    province: 'korat',
+    lat: 14.9625,
+    lng: 102.0680,
+    description: 'ติดร้านปลาเผาสืบศิริ (0.1 กม.) และครัวสุวิมล (1.8 กม.)',
+  },
+  {
+    id: 'korat_themall',
+    name: 'เดอะมอลล์ โคราช / ถ.มิตรภาพ',
+    nameEn: 'The Mall Korat / Mittraphap',
+    district: 'อ.เมืองนครราชสีมา',
+    province: 'korat',
+    lat: 14.9782,
+    lng: 102.0725,
+    description: 'ติดร้านครัวสุวิมล โคราช (0.1 กม.) และใกล้ปลาเผาสืบศิริ (1.7 กม.)',
+  },
+  {
+    id: 'korat_pradok',
+    name: 'บ้านประโดก / ต.หมื่นไวย โคราช',
+    nameEn: 'Ban Pradok / Muen Wai',
+    district: 'อ.เมืองนครราชสีมา',
+    province: 'korat',
+    lat: 15.0028,
+    lng: 102.1055,
+    description: 'ติดร้านขนมจีนประโดก ป้าพร (0.1 กม.)',
+  },
+  {
+    id: 'korat_pakchong',
+    name: 'ปากช่อง / ถ.มิตรภาพ (ประตูสู่เขาใหญ่)',
+    nameEn: 'Pak Chong / Mittraphap Road',
+    district: 'อ.ปากช่อง (นครราชสีมา)',
+    province: 'korat',
+    lat: 14.6850,
+    lng: 101.4120,
+    description: 'ติดร้านสเต็กเขาใหญ่ คาวบอยกริลล์ (0.2 กม.)',
+  },
+];
 
 export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
   {
@@ -31,6 +85,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'สุขุมวิท 39 (พร้อมพงษ์)',
     nameEn: 'Sukhumvit 39 / Phrom Phong',
     district: 'วัฒนา',
+    province: 'bangkok',
     lat: 13.7360,
     lng: 100.5710,
     description: 'ใกล้กะเพรา 1999 (0.8 กม.) และชาตราเพลิน (0.5 กม.)',
@@ -40,6 +95,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'ทองหล่อ ซอย 10',
     nameEn: 'Thonglor Soi 10',
     district: 'วัฒนา',
+    province: 'bangkok',
     lat: 13.7330,
     lng: 100.5820,
     description: 'ใกล้ราเมง ฮาจิเมะ (0.1 กม.) และส้มตำคุณแม่ (0.9 กม.)',
@@ -49,6 +105,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'เอกมัย ซอย 12',
     nameEn: 'Ekkamai Soi 12',
     district: 'วัฒนา',
+    province: 'bangkok',
     lat: 13.7285,
     lng: 100.5890,
     description: 'ติดร้านส้มตำคุณแม่ แซ่บนัว (0.1 กม.)',
@@ -58,6 +115,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'BTS อโศก / สุขุมวิท 21-23',
     nameEn: 'Asoke Intersection',
     district: 'คลองเตย/วัฒนา',
+    province: 'bangkok',
     lat: 13.7370,
     lng: 100.5615,
     description: 'ใกล้เบอร์เกอร์ คราฟต์ แฟคทอรี (0.2 กม.) และกะเพรา 1999 (0.7 กม.)',
@@ -67,6 +125,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'สุขุมวิท 49 (ซอยกลาง)',
     nameEn: 'Sukhumvit 49',
     district: 'วัฒนา',
+    province: 'bangkok',
     lat: 13.7380,
     lng: 100.5765,
     description: 'ใกล้พิซซ่าเตาถ่าน นาโปลี (0.2 กม.) และชาตราเพลิน (0.4 กม.)',
@@ -76,6 +135,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'สยามพารากอน / ปทุมวัน',
     nameEn: 'Siam Paragon / Pathum Wan',
     district: 'ปทุมวัน',
+    province: 'bangkok',
     lat: 13.7460,
     lng: 100.5348,
     description: 'ห่างจากโซนสุขุมวิทประมาณ 3.5 - 5.0 กม. (Sweet Spot แนะนำ)',
@@ -85,6 +145,7 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'สีลม / สาทร (BTS ศาลาแดง)',
     nameEn: 'Silom / Sathorn',
     district: 'บางรัก',
+    province: 'bangkok',
     lat: 13.7285,
     lng: 100.5350,
     description: 'ห่างจากโซนสุขุมวิทประมาณ 5.2 - 7.2 กม. (ระยะมาตรฐาน 30-45 นาที)',
@@ -94,10 +155,16 @@ export const BANGKOK_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
     name: 'เซ็นทรัลลาดพร้าว / จตุจักร',
     nameEn: 'Ladprao / Chatuchak',
     district: 'จตุจักร',
+    province: 'bangkok',
     lat: 13.8165,
     lng: 100.5610,
     description: 'ห่างจากโซนสุขุมวิทประมาณ 8.5 - 10.5 กม. (ระยะไกล >45 นาที กระเป๋าคุมอุณหภูมิ)',
   },
+];
+
+export const ALL_BENCHMARK_LOCATIONS: BenchmarkLocation[] = [
+  ...BANGKOK_BENCHMARK_LOCATIONS,
+  ...KORAT_BENCHMARK_LOCATIONS,
 ];
 
 /**

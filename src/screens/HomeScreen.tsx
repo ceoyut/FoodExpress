@@ -47,8 +47,13 @@ export const HomeScreen: React.FC = () => {
     setIsWalletOpen,
     setActiveTab,
     t,
-    language
+    language,
+    restaurantList
   } = useApp();
+
+  const sourceRestaurants = useMemo(() => {
+    return (restaurantList && restaurantList.length > 0) ? restaurantList : RESTAURANTS_DATA;
+  }, [restaurantList]);
 
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [isMessengerOpen, setIsMessengerOpen] = useState(false);
@@ -68,7 +73,7 @@ export const HomeScreen: React.FC = () => {
   // Compute counts of available restaurants per dietary preference
   const dietaryCounts = useMemo(() => {
     const counts: Record<DietaryPreference | 'all', number> = {
-      all: RESTAURANTS_DATA.length,
+      all: sourceRestaurants.length,
       vegetarian: 0,
       vegan: 0,
       halal: 0,
@@ -76,7 +81,7 @@ export const HomeScreen: React.FC = () => {
       keto: 0,
     };
 
-    RESTAURANTS_DATA.forEach(r => {
+    sourceRestaurants.forEach(r => {
       const prefs = new Set<DietaryPreference>(r.dietaryPreferences || []);
       r.menu?.forEach(m => {
         m.dietary?.forEach(d => prefs.add(d));
@@ -89,12 +94,12 @@ export const HomeScreen: React.FC = () => {
     });
 
     return counts;
-  }, []);
+  }, [sourceRestaurants]);
 
   // Compute restaurants with real-time calculated distance from user's geolocation
   const processedRestaurants = useMemo(() => {
     // 1. Calculate real-time distance and standard rider delivery fee for all restaurants
-    const withDistance = RESTAURANTS_DATA.map(rest => {
+    const withDistance = sourceRestaurants.map(rest => {
       const calculatedDistance = getRestaurantDistance(rest, userLocation);
       const deliveryFee = calculateStandardDeliveryFee(calculatedDistance);
       return {
